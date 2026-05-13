@@ -2,6 +2,26 @@
 
 All notable changes to little-coder are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and little-coder's public interface (CLI, providers, tools, skills) follows semver starting at `v0.0.1` post-rename.
 
+## [v1.2.0] — 2026-05-10
+
+Issue-cleanup release that also ships built-in LM Studio support. Closes [#17](https://github.com/itayinbarr/little-coder/issues/17) (Windows), [#19](https://github.com/itayinbarr/little-coder/issues/19) (phantom Agent tool), [#21](https://github.com/itayinbarr/little-coder/issues/21) (skill param mismatch).
+
+### Added
+- **Built-in `lmstudio/local-model` provider.** [LM Studio](https://lmstudio.ai/) exposes an OpenAI-compatible server on `http://127.0.0.1:1234/v1` by default, and previously the only way to use it was to overload `LLAMACPP_BASE_URL`. Now you can run `little-coder --model lmstudio/local-model` and it routes to whatever model LM Studio currently has loaded — no extra config for the single-model case. New env knobs `LMSTUDIO_BASE_URL` (overrides baseUrl, parity with `LLAMACPP_BASE_URL`/`OLLAMA_BASE_URL`) and `LMSTUDIO_API_KEY` (any value; LM Studio ignores it locally but pi requires the env var to exist). README has a new **Option C — LM Studio** under *Local model setup*. `.pi/settings.json` ships a `lmstudio/local-model` profile so the same context/thinking-budget tuning as the llamacpp profiles applies.
+
+### Fixed
+- **Windows launch ([#17](https://github.com/itayinbarr/little-coder/issues/17), thanks @Grogger for [PR #18](https://github.com/itayinbarr/little-coder/pull/18)).** On Windows, `node_modules/.bin/pi` is a `.cmd` shim that Node 20's `spawn()` can't execute directly without `shell: true`, and `shell: true` reintroduces the CVE-2024-27980 / DEP0190 shell-injection class. The launcher now resolves `pi.cmd` on Windows and invokes `cmd.exe /c pi.cmd ...` with args as an array — works on Windows 11, no Linux/macOS regression.
+- **Edit skill documentation ([#21](https://github.com/itayinbarr/little-coder/issues/21)).** `skills/tools/edit.md` advertised `old_string` / `new_string`, but pi's Edit tool only accepts `oldText` / `newText` (single-edit form) or `edits: [{oldText, newText}]` (array form). Rewritten to show the canonical array form *and* the single-edit back-compat form. While in there, also corrected `skills/tools/read.md` and `skills/tools/write.md` (`file_path` → `path` — pi aliases both, but the canonical name is now in the docs) and `skills/tools/grep.md` (`include` → `glob`, `max_results` → `limit`; pi does not alias these, so the old skill could genuinely produce tool-call errors on the grep path the same way Edit did).
+
+### Changed
+- **Removed phantom `Agent` skill ([#19](https://github.com/itayinbarr/little-coder/issues/19)).** `skills/tools/agent.md` documented an `Agent` tool that little-coder never actually registered — pi ships `examples/extensions/subagent/` as a reference impl, but it was not wired up by default. Deleted the skill card and the `agent` / `delegate` / `spawn` keys from `.pi/extensions/skill-inject/index.ts`'s `INTENT_MAP` so the model is no longer told it has a delegation tool. The `skills/protocols/task_decomposition.md` cheatsheet is untouched — decomposition guidance does not depend on a delegation tool.
+
+### Notes for upgraders
+- No CLI flag, settings, or skill-pack breaks. `--model lmstudio/local-model` works out of the box if LM Studio is serving on its default port 1234 with a model loaded.
+- If you'd been overloading `LLAMACPP_BASE_URL=http://127.0.0.1:1234/v1` to point at LM Studio, that keeps working — but the cleaner path is now `--model lmstudio/local-model` with no env tweaking.
+
+---
+
 ## [v1.1.0] — 2026-05-03
 
 Issue-cleanup release. Three small features and one bug fix, driven by GitHub issues #12 / #13 / #15 / #16.

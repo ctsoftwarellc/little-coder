@@ -9,7 +9,7 @@ user-invocable: false
 ## Read Tool
 Read a file's contents with line numbers.
 
-REQUIRED: file_path (absolute path)
+REQUIRED: path (absolute path)
 OPTIONAL: limit (max lines), offset (start line, 0-indexed)
 
 RULES:
@@ -19,10 +19,10 @@ RULES:
 
 EXAMPLE:
 ```tool
-{"name": "Read", "input": {"file_path": "/absolute/path/to/file.py"}}
+{"name": "Read", "input": {"path": "/absolute/path/to/file.py"}}
 ```
 
 EXAMPLE with range:
 ```tool
-{"name": "Read", "input": {"file_path": "/absolute/path/to/file.py", "limit": 50, "offset": 100}}
+{"name": "Read", "input": {"path": "/absolute/path/to/file.py", "limit": 50, "offset": 100}}
 ```

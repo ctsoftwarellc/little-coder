@@ -49,6 +49,22 @@
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         }
       ]
+    },
+    "lmstudio": {
+      "api": "openai-completions",
+      "baseUrl": "http://127.0.0.1:1234/v1",
+      "apiKey": "LMSTUDIO_API_KEY",
+      "models": [
+        {
+          "id": "local-model",
+          "name": "LM Studio (currently-loaded local model)",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 32768,
+          "maxTokens": 4096,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        }
+      ]
     }
   }
 }

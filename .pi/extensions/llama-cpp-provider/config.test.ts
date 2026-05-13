@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { applyEnvOverrides, loadProviders, mergeProviders, resolveOverridePath, type ProviderEntry } from "./config.ts";
 
 const sampleProvider = (baseUrl: string, modelId: string): ProviderEntry => ({
@@ -75,6 +76,11 @@ describe("applyEnvOverrides", () => {
     const providers = { ollama: sampleProvider("http://file/v1", "m2") };
     const out = applyEnvOverrides(providers, { OLLAMA_BASE_URL: "http://env/v1" });
     expect(out.ollama.baseUrl).toBe("http://env/v1");
+  });
+  it("LMSTUDIO_BASE_URL overrides lmstudio baseUrl", () => {
+    const providers = { lmstudio: sampleProvider("http://127.0.0.1:1234/v1", "local-model") };
+    const out = applyEnvOverrides(providers, { LMSTUDIO_BASE_URL: "http://127.0.0.1:5678/v1" });
+    expect(out.lmstudio.baseUrl).toBe("http://127.0.0.1:5678/v1");
   });
   it("does not alter providers without a known env knob", () => {
     const providers = { custom: sampleProvider("http://file/v1", "m") };
@@ -157,5 +163,25 @@ describe("loadProviders (filesystem)", () => {
     );
     const result = loadProviders(dir, { XDG_CONFIG_HOME: xdg });
     expect(result.providers.llamacpp.models[0].id).toBe("via-xdg");
+  });
+});
+
+describe("shipped models.json", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const pkgRoot = resolve(here, "..", "..", "..");
+
+  it("registers lmstudio/local-model on http://127.0.0.1:1234/v1", () => {
+    const result = loadProviders(pkgRoot, {});
+    const lmstudio = result.providers.lmstudio;
+    expect(lmstudio, "lmstudio provider should be present in shipped models.json").toBeDefined();
+    expect(lmstudio.baseUrl).toBe("http://127.0.0.1:1234/v1");
+    expect(lmstudio.api).toBe("openai-completions");
+    expect(lmstudio.apiKey).toBe("LMSTUDIO_API_KEY");
+    expect(lmstudio.models.find((m) => m.id === "local-model")).toBeDefined();
+  });
+
+  it("still registers llamacpp and ollama alongside lmstudio", () => {
+    const result = loadProviders(pkgRoot, {});
+    expect(Object.keys(result.providers).sort()).toEqual(["llamacpp", "lmstudio", "ollama"]);
   });
 });

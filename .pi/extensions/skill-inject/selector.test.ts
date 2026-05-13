@@ -21,7 +21,6 @@ const INTENT_MAP: Record<string, string[]> = {
   grep: ["Grep"], glob: ["Glob"],
   fetch: ["WebFetch"], download: ["WebFetch"], url: ["WebFetch"],
   web: ["WebSearch"],
-  agent: ["Agent"], delegate: ["Agent"], spawn: ["Agent"],
 };
 
 function predictTools(userText: string): string[] {
@@ -61,10 +60,10 @@ describe("skills directory loads from repo", () => {
   const here = dirname(fileURLToPath(import.meta.url));
   const toolsDir = join(here, "..", "..", "..", "skills", "tools");
 
-  it("exists and has 14 markdown files", () => {
+  it("exists and has 13 markdown files", () => {
     expect(existsSync(toolsDir)).toBe(true);
     const files = readdirSync(toolsDir).filter((f) => f.endsWith(".md"));
-    expect(files.length).toBe(14);
+    expect(files.length).toBe(13);
   });
 
   it("every tool skill has target_tool in frontmatter", () => {

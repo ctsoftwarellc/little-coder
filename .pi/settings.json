@@ -70,6 +70,14 @@
         "skill_token_budget": 300,
         "knowledge_token_budget": 200,
         "temperature": 0.3
+      },
+      "lmstudio/local-model": {
+        "context_limit": 32768,
+        "max_tokens": 4096,
+        "thinking_budget": 2048,
+        "skill_token_budget": 300,
+        "knowledge_token_budget": 200,
+        "temperature": 0.3
       }
     }
   }

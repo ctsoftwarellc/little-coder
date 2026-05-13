@@ -51,19 +51,21 @@ Cloud models work the same way:
 little-coder --model anthropic/claude-haiku-4-5
 little-coder --model openai/gpt-4o-mini "What does this codebase do?"
 little-coder --model ollama/qwen3.5             # local Ollama
+little-coder --model lmstudio/local-model       # local LM Studio (whatever model you have loaded)
 little-coder --list-models                      # see everything pi knows about
 ```
 
 The agent uses the directory you launched it from as its working directory — `Read` / `Write` / `Edit` / `Bash` operate on your project, not on little-coder's install path.
 
-For local providers (llama.cpp, Ollama) pi expects *some* value in the API-key env even though local servers ignore it:
+For local providers (llama.cpp, Ollama, LM Studio) pi expects *some* value in the API-key env even though local servers ignore it:
 
 ```bash
 export LLAMACPP_API_KEY=noop
 export OLLAMA_API_KEY=noop
+export LMSTUDIO_API_KEY=noop
 ```
 
-`LLAMACPP_BASE_URL` and `OLLAMA_BASE_URL` override the defaults (`http://127.0.0.1:8888/v1`, `http://127.0.0.1:11434/v1`).
+`LLAMACPP_BASE_URL`, `OLLAMA_BASE_URL`, and `LMSTUDIO_BASE_URL` override the defaults (`http://127.0.0.1:8888/v1`, `http://127.0.0.1:11434/v1`, `http://127.0.0.1:1234/v1`).
 
 For cloud providers, set the standard env (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, etc.) and pi will discover it.
 
@@ -96,6 +98,17 @@ curl -fsSL https://ollama.com/install.sh | sh
 ollama pull qwen3.5        # 9.7B — the paper's model
 # or: ollama pull qwen3.6-35b-a3b
 ```
+
+**Option C — LM Studio** (GUI; OpenAI-compatible server on port 1234):
+
+1. Install [LM Studio](https://lmstudio.ai/) and download a model (e.g. Qwen3.6 35B A3B GGUF).
+2. Open the **Developer** / **Local Server** tab, load the model, and click **Start Server** (default `http://127.0.0.1:1234`).
+3. Run little-coder:
+   ```bash
+   export LMSTUDIO_API_KEY=noop
+   little-coder --model lmstudio/local-model
+   ```
+   The shipped `lmstudio/local-model` id routes to whatever model LM Studio currently has loaded — no extra config needed for the single-model case. If you serve on a non-default port, set `LMSTUDIO_BASE_URL=http://127.0.0.1:<port>/v1`. To target a specific model when you have several loaded, add an entry to `~/.config/little-coder/models.json` (see **Configuring models** below).
 
 All small-model-specific extensions auto-disable for large/cloud models so they don't interfere.
 
@@ -140,7 +153,7 @@ Example — switch the llama.cpp port and bump `qwen3.6-35b-a3b` to a 150K conte
 
 Then verify with `little-coder --list-models` — you should see your overridden entry.
 
-`LLAMACPP_BASE_URL` and `OLLAMA_BASE_URL` env vars still beat both files for those two providers (legacy compat).
+`LLAMACPP_BASE_URL`, `OLLAMA_BASE_URL`, and `LMSTUDIO_BASE_URL` env vars still beat both files for those three providers.
 
 `.pi/settings.json` is a separate concern: it controls per-model **profiles** (context_limit, thinking_budget, temperature, benchmark_overrides) referenced by the `<provider>/<id>` key. Profiles don't register or describe models — they only tune how little-coder runs against models that are already registered.
 
@@ -241,7 +254,7 @@ little-coder/
 ├── .pi/
 │   ├── settings.json               # per-model profiles + benchmark_overrides (terminal_bench, gaia)
 │   └── extensions/                 # 20 TypeScript extensions, auto-discovered by pi
-│       ├── llama-cpp-provider/     # data-driven provider registration from models.json (+ user override file)
+│       ├── llama-cpp-provider/     # data-driven provider registration from models.json — ships llamacpp, ollama, lmstudio (+ user override file)
 │       ├── write-guard/            # Write refuses on existing files — the whitepaper invariant
 │       ├── extra-tools/            # glob, webfetch, websearch (pi ships grep/find)
 │       ├── skill-inject/           # per-turn tool-skill selection (error > recency > intent)

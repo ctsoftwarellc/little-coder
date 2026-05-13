@@ -43,11 +43,14 @@ export interface LoadResult {
   sources: { path: string; status: "ok" | "missing" | "invalid"; error?: string }[];
 }
 
-/** Provider env knob: if set, overrides the provider's baseUrl. Legacy compat
- *  for the two providers we shipped before the data-driven refactor. */
+/** Provider env knob: if set, overrides the provider's baseUrl. Originally a
+ *  back-compat shim for the two providers we shipped before the data-driven
+ *  refactor; kept as the per-provider env-override pattern for any provider
+ *  whose baseUrl changes between deployments. */
 const LEGACY_BASE_URL_ENV: Record<string, string> = {
   llamacpp: "LLAMACPP_BASE_URL",
   ollama: "OLLAMA_BASE_URL",
+  lmstudio: "LMSTUDIO_BASE_URL",
 };
 
 /** Resolution order for the user-override file. First existing path wins. */
