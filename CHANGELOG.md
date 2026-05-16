@@ -2,6 +2,25 @@
 
 All notable changes to little-coder are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and little-coder's public interface (CLI, providers, tools, skills) follows semver starting at `v0.0.1` post-rename.
 
+## [v1.3.0] — 2026-05-16
+
+First functional release of Phase 2 (iterative improvement on real-world coding tasks). Three concrete sharp edges that surfaced while actually using the Mac → Linux LAN setup, plus a quality-of-life cleanup on the pi update banner. Minor version bump because three of the four changes are new behavior, all backwards-compatible.
+
+### Added
+- **`cp`, `mv`, `mkdir`, `touch` are now on the built-in bash whitelist.** The permission-gate's `BUILTIN_SAFE_PREFIXES` previously covered only read-only inspection (`ls`, `cat`, `git log`, `find`, `grep`, …), so the model couldn't move or copy a file it just created without flipping `LITTLE_CODER_PERMISSION_MODE=accept-all`. These four were the most common false-positive blocks on day-to-day editing work. Trailing-whitespace word-boundary convention preserved — `cp ` allows `cp a b` but not `cpufetch`. `rm` and `sudo` stay off the list by design; per-deployment escape hatch is still `LITTLE_CODER_BASH_ALLOW`. New positive + negative-boundary assertions in `.pi/extensions/permission-gate/permission.test.ts`.
+- **Image input on `llamacpp/qwen3.6-35b-a3b`.** `models.json` now declares `input: ["text", "image"]` for this entry, so pi's TUI no longer rejects clipboard / drag-and-drop screenshots. Pi already ships the full image-conversion / resize / OpenAI-format encoding stack (`@mariozechner/pi-coding-agent/dist/utils/{clipboard-image,image-resize,image-convert,mime}.js`); the gate was purely the capability flag on the model. README's *Option A — llama.cpp* now folds the vision projector into the canonical setup: an extra `hf download unsloth/Qwen3.6-35B-A3B-GGUF mmproj-F16.gguf` line and `--mmproj ~/models/mmproj-F16.gguf` on the `llama-server` command. Skip both lines if you want a text-only deployment.
+
+### Fixed
+- **Write tool no longer writes to filesystem root when the model emits `/<filename>`.** Previously the tool's schema described `file_path` as *"Absolute file path"*, so models that had no obvious working-directory context dutifully wrote `/person.md` — landing the file at the filesystem root instead of under cwd. `.pi/extensions/write-guard/index.ts` now runs a deterministic `normalizeWritePath()` before any filesystem call: a path matching `/^\/[^/]+$/` (root + single segment, no intermediate dirs) is rewritten to `<cwd>/<segment>` and the success message says so explicitly; bare filenames / relative paths are resolved against cwd up-front so the returned path is absolute; genuine system writes (`/etc/X`, `/tmp/Y/Z`) are passed through untouched. Tool description updated to give the model the right mental model. New unit-test module `.pi/extensions/write-guard/write-guard.test.ts` covers the five distinct path shapes.
+
+### Changed
+- **Pi's "Update Available" banner is suppressed by default.** `bin/little-coder.mjs` now defaults `PI_SKIP_VERSION_CHECK=1` unless you've explicitly set it. little-coder bundles `@mariozechner/pi-coding-agent` as an internal dependency pinned per release, so the in-session nag about updating pi was telling users to do something they shouldn't (and couldn't usefully) do — `npm install -g @mariozechner/pi-coding-agent@latest` doesn't affect the bundled copy. Opt back in with `PI_SKIP_VERSION_CHECK=0` if you want the banner. (The broader `PI_OFFLINE=1` is still your hammer for killing pi's other startup network calls — package-update check, tool auto-fetch, install telemetry.)
+
+### Notes for upgraders
+- No CLI flag, settings.json, or skill-pack breaks. Existing `LITTLE_CODER_BASH_ALLOW` overrides continue to compose on top of the (now-wider) built-in list. Existing `models.json` user-override files for the llamacpp provider continue to work unchanged; if you'd hand-rolled an override entry for `qwen3.6-35b-a3b` you'll keep its old `input` value until you redeclare it. Tool descriptions changed on Write, which the model sees as a system-prompt diff — no API surface change for you.
+
+---
+
 ## [v1.2.1] — 2026-05-16
 
 Docs-only release marking two milestones: **Terminal-Bench 2.0 leaderboard acceptance** and the **end of the Phase 1 benchmark baseline**. No CLI, settings, or skill-pack changes — the env-var path for remote inference (`LLAMACPP_BASE_URL` / `OLLAMA_BASE_URL` / `LMSTUDIO_BASE_URL` pointing at a non-loopback host) has worked since v1.1.0 / v1.2.0, but it was undocumented for the LAN-server case until now.

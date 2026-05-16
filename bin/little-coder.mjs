@@ -87,7 +87,18 @@ const piArgs = [
   ...userArgs,
 ];
 
-// ---- 7. Spawn pi in the user's cwd ----
+// ---- 7. Suppress pi's own version-banner by default ----
+// pi is an internal dependency here; users install `little-coder` and shouldn't
+// see in-session nags about updating the underlying coding-agent package.
+// PI_SKIP_VERSION_CHECK is the surgical pi switch (interactive-mode.js:525)
+// that gates the "Update Available" banner without touching pi's other
+// network-dependent startup paths. Honor an explicit user value (set to "0" or
+// anything else to re-enable the banner; PI_OFFLINE=1 also re-overrides).
+if (process.env.PI_SKIP_VERSION_CHECK === undefined) {
+  process.env.PI_SKIP_VERSION_CHECK = "1";
+}
+
+// ---- 8. Spawn pi in the user's cwd ----
 const [spawnCmd, spawnArgs] = isWindows
   ? ["cmd.exe", ["/c", piBin, ...piArgs]]
   : [piBin, piArgs];

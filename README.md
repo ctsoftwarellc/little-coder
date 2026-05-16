@@ -81,15 +81,20 @@ git clone https://github.com/ggml-org/llama.cpp && cd llama.cpp
 cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=120 -DLLAMA_CURL=ON
 cmake --build build --config Release -j
 
-# Fetch a GGUF
+# Fetch the model GGUF and the matching vision projector.
+# The mmproj (~900 MB) is what lets the model see attached screenshots.
 pip install -U "huggingface_hub[cli]"
 hf download unsloth/Qwen3.6-35B-A3B-GGUF Qwen3.6-35B-A3B-UD-Q4_K_M.gguf --local-dir ~/models
+hf download unsloth/Qwen3.6-35B-A3B-GGUF mmproj-F16.gguf            --local-dir ~/models
 
 # Serve it (MoE trick: experts in RAM, attention on GPU → 22 GB model on 8 GB VRAM)
 build/bin/llama-server -m ~/models/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf \
+   --mmproj ~/models/mmproj-F16.gguf \
    --host 127.0.0.1 --port 8888 --jinja \
    -c 16384 -ngl 99 --n-cpu-moe 999 --flash-attn on
 ```
+
+If you only need text and want to skip the projector download, drop the second `hf download` line and the `--mmproj` flag — little-coder still works text-only, but the TUI's image attachment will be rejected by the server with a 4xx.
 
 **Option B — Ollama** (simpler, but slower on MoE):
 
@@ -186,7 +191,7 @@ Then verify with `little-coder --list-models` — you should see your overridden
 
 ## Permissions
 
-little-coder gates `Bash` tool calls against a built-in safe-prefix whitelist (`ls`, `cat`, `git log/status/diff`, `find`, `grep`, etc.) before pi's own confirmation flow ever sees them.
+little-coder gates `Bash` tool calls against a built-in safe-prefix whitelist (`ls`, `cat`, `head`, `tail`, `git log/status/diff`, `find`, `grep`, `cp`, `mv`, `mkdir`, `touch`, etc.) before pi's own confirmation flow ever sees them. `rm` and `sudo` are intentionally not on the list — add them via `LITTLE_CODER_BASH_ALLOW` per deployment if you really need them.
 
 Two env vars control the gate:
 
@@ -247,7 +252,13 @@ That spans short coding exercises (Polyglot), interactive shell-bound tasks (Ter
 
 **`ECONNREFUSED 127.0.0.1:8888`** — llama.cpp isn't running. Start `llama-server` first, or switch `--model` to an Ollama/cloud ID.
 
+**LAN client times out (no `RST`, just hangs)** — the inference box's firewall is dropping the SYN. The usual cause is `ufw` with a default-deny policy that allow-lists only SSH / a few dev ports. From the server: `sudo ufw status verbose` to confirm; `sudo ufw allow from <your-lan-subnet>/24 to any port 8888 proto tcp` to fix (scoped to the LAN so you're not exposing the box). Docker-published ports bypass `ufw` via `PREROUTING` NAT, which is why a Docker container can be reachable while a plain `llama-server` on the same host isn't.
+
+**Image attachment is accepted but the request returns 4xx** — your llama-server is running without a vision projector. Re-launch it with `--mmproj ~/models/mmproj-F16.gguf` (or another mmproj variant from the same GGUF repo). The `--list-models` `images` column reflects what the client *will attempt to send*, not what the server can answer; the projector is what gives the model eyes.
+
 **No API key env var warning** — pi expects *some* key even for local providers. Export `LLAMACPP_API_KEY=noop` (or `OLLAMA_API_KEY=noop`) before launching.
+
+**No pi "Update Available" banner** — that's intentional. little-coder defaults `PI_SKIP_VERSION_CHECK=1` so the bundled pi runtime doesn't nag about updating itself; little-coder pins pi to a known-good version per release. If you actually want the banner back, `export PI_SKIP_VERSION_CHECK=0` before launching.
 
 **Extension load failures on startup** — run `little-coder --list-models --verbose`; extension errors surface there. If the install looks corrupt: `npm uninstall -g little-coder && npm install -g little-coder`.
 

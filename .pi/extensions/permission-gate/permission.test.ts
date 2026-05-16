@@ -9,10 +9,22 @@ describe("isSafeBash", () => {
     expect(isSafeBash("grep -r pattern .")).toBe(true);
     expect(isSafeBash("rg pattern src/")).toBe(true);
   });
+  it("allows routine filesystem scaffolding (cp/mv/mkdir/touch)", () => {
+    expect(isSafeBash("cp a b")).toBe(true);
+    expect(isSafeBash("mv old new")).toBe(true);
+    expect(isSafeBash("mkdir -p sub/dir")).toBe(true);
+    expect(isSafeBash("touch foo.md")).toBe(true);
+  });
+  it("preserves trailing-whitespace word boundary on fs prefixes", () => {
+    // Without the trailing space, "cp" would match "cpufetch". With it, these stay blocked.
+    expect(isSafeBash("cpufetch")).toBe(false);
+    expect(isSafeBash("mvtool")).toBe(false);
+    expect(isSafeBash("mkdiroops")).toBe(false);
+    expect(isSafeBash("touchscreen")).toBe(false);
+  });
   it("blocks non-whitelisted commands", () => {
     expect(isSafeBash("rm -rf /")).toBe(false);
     expect(isSafeBash("npm install foo")).toBe(false);
-    expect(isSafeBash("cp a b")).toBe(false);
     expect(isSafeBash("sudo anything")).toBe(false);
   });
   it("handles leading whitespace", () => {

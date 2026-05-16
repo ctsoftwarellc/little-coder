@@ -21,6 +21,10 @@ const BUILTIN_SAFE_PREFIXES: readonly string[] = [
   "pip show", "pip list", "npm list", "cargo metadata",
   "df ", "du ", "free ", "top -bn", "ps ",
   "curl -I", "curl --head",
+  // Routine filesystem scaffolding. Trailing space = word boundary, so
+  // "cp " matches "cp a b" but not "cpufetch". rm stays off the list by
+  // design; use LITTLE_CODER_BASH_ALLOW=rm if a deployment needs it.
+  "cp ", "mv ", "mkdir ", "touch ",
 ];
 
 // Trailing whitespace is meaningful — it acts as a word boundary in startsWith

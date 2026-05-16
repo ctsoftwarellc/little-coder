@@ -1,7 +1,40 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
+
+/**
+ * Resolve the Write tool's `file_path` argument to a concrete on-disk path.
+ *
+ * Two deterministic rewrites:
+ *
+ * 1. `"/<single-segment>"` (e.g. `/foo.md`) → `<cwd>/<single-segment>`.
+ *    Background: the model has been seen to anchor at filesystem root when
+ *    given an "Absolute file path" schema and no obvious directory context.
+ *    Genuine system-path writes always include at least one intermediate
+ *    directory (`/etc/X`, `/tmp/Y/Z`), so a root + bare filename is almost
+ *    always a mistake. Rewriting to cwd matches user intent and avoids
+ *    accidentally writing to `/`.
+ *
+ * 2. Bare filename / relative path (no leading slash) → resolved against cwd.
+ *    Node's `fs` APIs already do this implicitly, but resolving here makes
+ *    the success message report the real absolute path that was written.
+ *
+ * Anything else (absolute path with at least one intermediate directory) is
+ * left untouched.
+ */
+export function normalizeWritePath(
+  filePath: string,
+  cwd: string = process.cwd(),
+): { path: string; rewrittenFrom?: string } {
+  if (/^\/[^/]+$/.test(filePath)) {
+    return { path: join(cwd, filePath.slice(1)), rewrittenFrom: filePath };
+  }
+  if (!isAbsolute(filePath)) {
+    return { path: join(cwd, filePath) };
+  }
+  return { path: filePath };
+}
 
 // Port of tools.py::_write. Preserves the exact Edit-recipe error string so
 // the model recovers to Edit on its next turn. The whitepaper's benchmark
@@ -12,18 +45,24 @@ export default function (pi: ExtensionAPI) {
     name: "write",
     label: "Write",
     description:
-      "Create a NEW file with the given content. Refuses if the file already exists — use edit to modify existing files. Parent directories are created automatically.",
+      "Create a NEW file with the given content. Refuses if the file already exists — use edit to modify existing files. " +
+      "Parent directories are created automatically. " +
+      "Pass either a path relative to the working directory (e.g. `notes/plan.md`) or a full absolute path. " +
+      "A bare filename like `foo.md` resolves to <cwd>/foo.md. " +
+      "A path of the form `/<filename>` with no intermediate directories is treated as cwd-relative " +
+      "(use `/etc/hosts` etc. if you really mean the filesystem root).",
     parameters: Type.Object({
-      file_path: Type.String({ description: "Absolute file path" }),
+      file_path: Type.String({ description: "File path (relative to cwd, or absolute)" }),
       content: Type.String({ description: "Full file content" }),
     }),
     async execute(_id, { file_path, content }) {
-      if (existsSync(file_path)) {
+      const { path: resolved, rewrittenFrom } = normalizeWritePath(file_path);
+      if (existsSync(resolved)) {
         const recipe =
-          `Error: Write refused — ${file_path} already exists.\n` +
+          `Error: Write refused — ${resolved} already exists.\n` +
           `\n` +
           `Write is only for creating NEW files. To change an existing file, use Edit:\n` +
-          `  {"name": "Edit", "input": {"file_path": "${file_path}", ` +
+          `  {"name": "Edit", "input": {"file_path": "${resolved}", ` +
           `"old_string": "<exact text currently in the file>", ` +
           `"new_string": "<replacement text>"}}\n` +
           `\n` +
@@ -41,12 +80,15 @@ export default function (pi: ExtensionAPI) {
       }
 
       try {
-        mkdirSync(dirname(file_path), { recursive: true });
-        writeFileSync(file_path, content, { encoding: "utf-8" });
+        mkdirSync(dirname(resolved), { recursive: true });
+        writeFileSync(resolved, content, { encoding: "utf-8" });
         const lc = content.split("\n").length - (content.endsWith("\n") ? 1 : 0) +
           (content.length > 0 && !content.endsWith("\n") ? 1 : 0);
+        const suffix = rewrittenFrom
+          ? ` (rewrote ${rewrittenFrom} → cwd; root-path single-segment write redirected)`
+          : "";
         return {
-          content: [{ type: "text", text: `Created ${file_path} (${lc} lines)` }],
+          content: [{ type: "text", text: `Created ${resolved} (${lc} lines)${suffix}` }],
           details: {},
         };
       } catch (e) {
