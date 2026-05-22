@@ -242,9 +242,15 @@ All runs used a consumer laptop: i9-14900HX, 32 GB RAM, **8 GB VRAM** on RTX 507
 
 That spans short coding exercises (Polyglot), interactive shell-bound tasks (Terminal-Bench), and tool-using research (GAIA), all on the same scaffold. The data needed to choose what to fix next is now in hand.
 
-**Phase 2 — iterative improvement on real-world tasks: starting now.** The motivating question shifts from *how wide is the impact radius?* to *which scaffolding changes compound on long-horizon real work?* The signal we have already points at concrete things to try — thinking-budget / quality-monitor behavior on long-horizon tasks, deliberate.py-style parallel branches on failure, better shell-session recovery for interactive-process traps, evidence-handling on multi-document GAIA L3 tasks — but the priority order comes from real-world use, not from a benchmark suite. Expect smaller, more frequent releases driven by what little-coder actually struggles with on day-to-day coding work.
+**Phase 2 — operating real knowledge bases as day-to-day work: the current focus.** The motivating question shifts from *how wide is the impact radius?* to *can a small local model reliably operate and traverse a large, messy knowledge base?* little-coder's day-to-day target is now real work over **many markdown files at once** — reading, cross-referencing, and updating sprawling note/log collections in the most token-efficient way a small local model can manage. Features are being implemented and tested across several real pipelines in parallel:
 
-**Future benchmarks (deferred).** New benchmarks like **ProgramBench**, SWE-bench Verified (multi-file real-world patches), and a GAIA test-split run come back into scope after Phase 2 has produced enough scaffolding signal to make a fresh measurement worth running. Re-benchmarking before the next round of changes lands would mostly re-measure the same baseline.
+- **Domains** — medical, athletic, and educational knowledge bases, each with its own structure, vocabulary, and citation needs.
+- **Scale** — 10+ years of logs, tens of thousands of entries of varied kinds, stressing retrieval, compaction, and the context-budgeting extensions on histories far longer than any single benchmark task.
+- **Messy real-world inputs** — validation against conflicting OCR extractions of the same source, and multilingual content where the same fact recurs across languages.
+
+This is where the scaffolding work now compounds: knowledge injection/selection, evidence handling, compaction fidelity, and the harness-intervention behaviors. Expect smaller, more frequent releases driven by what little-coder actually struggles with on this work rather than by a benchmark suite.
+
+**Benchmarks (deferred).** The four-benchmark baseline above stands as the scaffold-fit reference point. Fresh runs — **ProgramBench**, SWE-bench Verified (multi-file real-world patches), a GAIA test split — come back into scope once the knowledge-base work has produced enough scaffolding signal to make a new measurement worth running.
 
 ---
 

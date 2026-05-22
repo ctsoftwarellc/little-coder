@@ -6,7 +6,7 @@
     "default_model_profile": {
       "context_limit": 32768,
       "max_tokens": 4096,
-      "thinking_budget": 2048,
+      "thinking_budget": 4096,
       "skill_token_budget": 300,
       "knowledge_token_budget": 200,
       "system_prompt_budget": 0,
@@ -17,7 +17,7 @@
       "llamacpp/qwen3.6-27b": {
         "context_limit": 32768,
         "max_tokens": 4096,
-        "thinking_budget": 2048,
+        "thinking_budget": 4096,
         "skill_token_budget": 300,
         "knowledge_token_budget": 200,
         "temperature": 0.3,
@@ -38,7 +38,7 @@
       "llamacpp/qwen3.6-35b-a3b": {
         "context_limit": 32768,
         "max_tokens": 4096,
-        "thinking_budget": 2048,
+        "thinking_budget": 4096,
         "skill_token_budget": 300,
         "knowledge_token_budget": 200,
         "temperature": 0.3,
@@ -59,7 +59,7 @@
       "llamacpp/qwen3.5-9b": {
         "context_limit": 32768,
         "max_tokens": 4096,
-        "thinking_budget": 2048,
+        "thinking_budget": 4096,
         "skill_token_budget": 300,
         "knowledge_token_budget": 200,
         "temperature": 0.3
@@ -67,7 +67,7 @@
       "ollama/qwen3.5": {
         "context_limit": 32768,
         "max_tokens": 4096,
-        "thinking_budget": 2048,
+        "thinking_budget": 4096,
         "skill_token_budget": 300,
         "knowledge_token_budget": 200,
         "temperature": 0.3
@@ -75,7 +75,7 @@
       "lmstudio/local-model": {
         "context_limit": 32768,
         "max_tokens": 4096,
-        "thinking_budget": 2048,
+        "thinking_budget": 4096,
         "skill_token_budget": 300,
         "knowledge_token_budget": 200,
         "temperature": 0.3
