@@ -2,6 +2,18 @@
 
 All notable changes to little-coder are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and little-coder's public interface (CLI, providers, tools, skills) follows semver starting at `v0.0.1` post-rename.
 
+## [v1.6.0] — 2026-05-23
+
+A new harness intervention for small-context models: oversized file reads no longer blow the context window. little-coder targets local models with small windows (`context_limit` is 32768, and the live window is often less), but pi's built-in `read` returns up to ~2000 lines in a single tool result — enough for one read to evict the conversation and derail the run. The harness now catches that read before it lands and replaces it with the file's head plus a "search, don't slurp" directive, surfaced through the same one-voice `harness intervention: …` line as the thinking-budget cap, write-guard redirect, and turn-cap.
+
+### Added
+- **`read-guard` extension — trims a Read that would overflow the context window.** On the `tool_result` event, when a successful `read`'s content would push context usage past the window (`ctx.getContextUsage().tokens + estimate(result) > contextWindow`, estimated at the same 3.5 chars/token ratio as the thinking-budget cap), the harness replaces the result with **only the file's first 30 lines** followed by a message that explains the trim and directs the model to use those lines to understand the file's structure, then narrow down — locate what it needs with `grep`/`find` or a targeted `read` (`offset`/`limit`) — rather than re-reading the whole file. The full file is still read from disk (pi already caps that at ~2000 lines), but the oversized text never reaches the model's context because the result content is swapped before it lands. `tool_result` (not `tool_call`) is used precisely because it can deliver both the 30 lines and the explanation in one result — a `tool_call` block can only return a `reason` string, and mutating `input.limit` gives lines but no message. When current usage is unknown (e.g. right after compaction, `tokens` is null), it falls back to trimming any single read that alone exceeds half the window. Image reads and error results are left untouched. New extension at `.pi/extensions/read-guard/`, auto-discovered by the launcher.
+
+### Notes for upgraders
+- No CLI flag, `models.json` shape, `.pi/settings.json`, or per-model-profile schema changes. The new extension auto-loads like every other `.pi/extensions/*/index.ts`, and only changes behaviour when a read would otherwise overflow the context window — normal reads pass through untouched. The threshold reads pi's live `getContextUsage()`, so it scales with whatever context window the active model reports.
+
+---
+
 ## [v1.5.1] — 2026-05-22
 
 A branding release — no behaviour changes. little-coder now wears the v1.0 brand book: the warm **paper / ink / honey** palette (`#F2EBDC` · `#1A1410` · `#E15A1F`), the `lc▌` block-cursor mark, and IBM Plex Mono. The "ready to type" cursor is the punchline — it ties the CLI heritage into the identity without saying so.

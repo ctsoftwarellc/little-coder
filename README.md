@@ -299,10 +299,11 @@ The benchmarks harness (`benchmarks/`) is dev-only and not shipped with the npm 
 little-coder/
 ├── .pi/
 │   ├── settings.json               # per-model profiles + benchmark_overrides (terminal_bench, gaia)
-│   └── extensions/                 # 21 TypeScript extensions, auto-discovered by pi
+│   └── extensions/                 # 23 TypeScript extensions, auto-discovered by pi
 │       ├── branding/               # little-coder startup header + terminal title (replaces pi's built-in)
 │       ├── llama-cpp-provider/     # data-driven provider registration from models.json — ships llamacpp, ollama, lmstudio (+ user override file)
 │       ├── write-guard/            # Write refuses on existing files; rewrites root-bare /foo.md paths to cwd
+│       ├── read-guard/             # trims a Read that would overflow the context window to its first 30 lines + a search-instead directive
 │       ├── extra-tools/            # glob, webfetch, websearch (pi ships grep/find)
 │       ├── skill-inject/           # per-turn tool-skill selection (error > recency > intent)
 │       ├── knowledge-inject/       # algorithm cheat-sheet scoring (word=1.0, bigram=2.0, threshold=2.0)
