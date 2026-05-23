@@ -20,6 +20,15 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+# The official Pages actions below (configure-pages@v5, upload-pages-artifact@v3,
+# deploy-pages@v4) still ship on the Node.js 20 runtime, which GitHub forces to
+# Node 24 on 2026-06-02 and removes on 2026-09-16. There are no newer majors that
+# move them to Node 24 yet, so opt in now — this silences the deprecation warning
+# and is a no-op once Node 24 becomes the default. Remove when the actions ship
+# Node-24 majors.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
