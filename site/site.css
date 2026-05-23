@@ -1109,6 +1109,21 @@ body.show-grid::after {
 @media (max-width: 760px) {
   .bench-row { grid-template-columns: 1fr; }
   .bench-num { text-align: left; min-width: 0; }
+  /* stack the number under the bar so the bar gets full width — at the
+     squeezed side-by-side width the 5 axis ticks collapsed onto each other.
+     gap clears the ticks, which sit ~22px below the bar. */
+  .bench-bar-wrap { flex-direction: column; align-items: stretch; gap: 30px; }
+  /* the bar's `flex: 1` grows it horizontally in the desktop row layout; in
+     this column layout that same flex applies to the vertical main axis and
+     collapses its height to 0 (flex-basis:0). Reset it so height:56px holds
+     while align-items:stretch gives it full width. */
+  .bench-bar { flex: none; width: 100%; }
+  /* rows are far apart once stacked, so the shared top axis no longer reads
+     for the bottom bar — give the champ bar its own ticks (light on dark). */
+  .bench-row.champ .bench-tick { display: block; color: rgba(242,235,220,0.5); }
+  /* caption + "led by" are a space-between row on desktop; they interleave at
+     phone width, so stack them. */
+  .bench-foot { flex-direction: column; align-items: flex-start; gap: 6px; }
   .feat-grid, .prin-grid { grid-template-columns: 1fr; }
   .foot-top { flex-direction: column; align-items: flex-start; }
   .foot-msg { text-align: left; }
