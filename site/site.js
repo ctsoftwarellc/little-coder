@@ -313,4 +313,68 @@
     }, 250);
   });
 
+  // ---------- hero tagline rotator ----------
+  // The lead cycles through a few positioning lines, ~5s each. The static prefix
+  // "a coding agent built " never retypes — only the tail rotates, with a solid
+  // honey cursor while typing and a blinking one at rest. We pin the lead to its
+  // tallest phrase first so the rotating tail never reflows the page (the same
+  // no-jump discipline as the terminals above).
+  (function heroRotate() {
+    const lead = document.querySelector('.hero-lead');
+    const tail = lead && lead.querySelector('.lead-tail');
+    const cursor = lead && lead.querySelector('.lead-cursor');
+    if (!lead || !tail) return;
+
+    const TAILS = [
+      'for small models',
+      'for tending to your medical documents',
+      'for when you hit Claude Code’s limit',
+    ];
+    const DWELL = 5000; // each phrase stays readable ~5s before it changes
+    const TYPE = 42;    // ms per typed character
+    const ERASE = 24;   // ms per erased character
+
+    // Reserve the tallest phrase's rendered height up front, re-pinning on font
+    // load and width change, so a longer tail never grows the box and shoves the
+    // page down (mirrors reserveTerminalHeight for the terminals).
+    function pinHeight() {
+      const cur = tail.textContent;
+      lead.style.minHeight = '';
+      let max = 0;
+      for (const t of TAILS) { tail.textContent = t; max = Math.max(max, lead.getBoundingClientRect().height); }
+      tail.textContent = cur;
+      lead.style.minHeight = Math.ceil(max) + 'px';
+    }
+    pinHeight();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(pinHeight).catch(() => {});
+    let pinTimer = null, pinW = window.innerWidth;
+    window.addEventListener('resize', () => {
+      if (window.innerWidth === pinW) return; // ignore mobile scroll-driven toolbar resizes
+      pinW = window.innerWidth;
+      clearTimeout(pinTimer);
+      pinTimer = setTimeout(pinHeight, 200);
+    });
+
+    // Honor reduced-motion: leave the first phrase static, no type/erase.
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    const solid = () => cursor && cursor.classList.remove('blink');
+    const rest = () => cursor && cursor.classList.add('blink');
+
+    (async function loop() {
+      let i = 0;
+      await sleep(DWELL); // hold the first (already-rendered) phrase
+      while (true) {
+        solid();
+        while (tail.textContent.length) { tail.textContent = tail.textContent.slice(0, -1); await sleep(ERASE); }
+        i = (i + 1) % TAILS.length;
+        const next = TAILS[i];
+        for (let c = 0; c < next.length; c++) { tail.textContent += next[c]; await sleep(TYPE); }
+        rest();
+        await sleep(DWELL);
+      }
+    })();
+  })();
+
 })();
