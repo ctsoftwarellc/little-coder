@@ -2,6 +2,18 @@
 
 All notable changes to little-coder are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and little-coder's public interface (CLI, providers, tools, skills) follows semver starting at `v0.0.1` post-rename.
 
+## [v1.6.1] — 2026-05-23
+
+A one-line whitelist tweak: `sed` is now an allowed bash command in `auto` permission mode. Stream-editing and line-range printing (`sed -n '1,20p' file`) are routine enough that gating them behind a per-deployment `LITTLE_CODER_BASH_ALLOW` was friction without a safety payoff — `sed` sits naturally alongside the already-allowed text-search tools (`grep`, `rg`, `find`).
+
+### Changed
+- **`sed ` added to the built-in `SAFE_PREFIXES`** (`.pi/extensions/permission-gate/index.ts`). As with every prefix on that list, the trailing space is a word boundary, so `sed …` is allowed while `sedfoo` is not. Note this also permits in-place edits (`sed -i`), the same read-write trade-off the list already makes for `cp `/`mv `; `rm` still stays off the list by design.
+
+### Notes for upgraders
+- Purely additive. No CLI flag, `models.json`, `.pi/settings.json`, or per-model-profile schema changes. If a deployment had been allowing `sed` via `LITTLE_CODER_BASH_ALLOW`, that entry is now redundant (harmless — the lists are merged).
+
+---
+
 ## [v1.6.0] — 2026-05-23
 
 A new harness intervention for small-context models: oversized file reads no longer blow the context window. little-coder targets local models with small windows (`context_limit` is 32768, and the live window is often less), but pi's built-in `read` returns up to ~2000 lines in a single tool result — enough for one read to evict the conversation and derail the run. The harness now catches that read before it lands and replaces it with the file's head plus a "search, don't slurp" directive, surfaced through the same one-voice `harness intervention: …` line as the thinking-budget cap, write-guard redirect, and turn-cap.
