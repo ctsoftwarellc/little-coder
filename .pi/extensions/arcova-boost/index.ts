@@ -1,13 +1,9 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import { execFile } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { promisify } from "node:util";
-import { trimText } from "./trim.ts";
-import { resolvePhpCommand } from "../arcova-verify/php.ts";
+import { renderRouteFileSummary, trimText } from "./trim.ts";
 
-const execFileAsync = promisify(execFile);
 const DEFAULT_MAX = 12_000;
 
 function isLaravelRepo(cwd: string): boolean {
@@ -36,7 +32,7 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "ArcovaListRoutes",
     label: "ArcovaListRoutes",
-    description: "List Laravel routes with output trimming. Read-only.",
+    description: "List Laravel route files and route-like lines with output trimming. Read-only and does not run artisan.",
     parameters: Type.Object({
       maxChars: Type.Optional(Type.Number()),
     }),
@@ -44,18 +40,7 @@ export default function (pi: ExtensionAPI) {
       if (!isLaravelRepo(process.cwd())) {
         return { content: [{ type: "text", text: "Not a Laravel repo." }], details: {}, isError: true };
       }
-      try {
-        const php = resolvePhpCommand();
-        const result = await execFileAsync(php, ["artisan", "route:list", "--compact"], {
-          cwd: process.cwd(),
-          timeout: 30_000,
-          maxBuffer: 1024 * 1024,
-          windowsHide: true,
-        });
-        return { content: [{ type: "text", text: trimText(`${result.stdout}${result.stderr}`, maxChars ?? DEFAULT_MAX) }], details: {} };
-      } catch (error: any) {
-        return { content: [{ type: "text", text: trimText(`${error.stdout ?? ""}${error.stderr ?? ""}${error.message ?? ""}`, maxChars ?? DEFAULT_MAX) }], details: {}, isError: true };
-      }
+      return { content: [{ type: "text", text: renderRouteFileSummary(process.cwd(), maxChars ?? DEFAULT_MAX) }], details: {} };
     },
   });
 

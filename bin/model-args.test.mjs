@@ -14,6 +14,12 @@ describe("normalizeModelArgs", () => {
     expect(normalizeModelArgs(["qwen/qwen3.5-9b"], {})).toEqual(["--model", "lmstudio/qwen/qwen3.5-9b"]);
   });
 
+  it("maps bare LM Studio aliases to their registered model ids", () => {
+    expect(normalizeModelArgs(["qwen3.6-35b-a3b"], {})).toEqual(["--model", "lmstudio/qwen/qwen3.6-35b-a3b"]);
+    expect(normalizeModelArgs(["qwen3.5-9b"], {})).toEqual(["--model", "lmstudio/qwen/qwen3.5-9b"]);
+    expect(normalizeModelArgs(["gemma-4-12b-qat"], {})).toEqual(["--model", "lmstudio/google/gemma-4-12b-qat"]);
+  });
+
   it("keeps qualified positional model ids", () => {
     expect(normalizeModelArgs(["ollama/qwen3.5"], {})).toEqual(["--model", "ollama/qwen3.5"]);
   });

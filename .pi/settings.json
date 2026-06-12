@@ -13,6 +13,30 @@
       "temperature": 0.3
     },
     "model_profiles": {
+      "llamacpp/qwen3.6-27b": {
+        "max_tokens": 8192,
+        "thinking_budget": 3000,
+        "skill_token_budget": 350,
+        "knowledge_token_budget": 300,
+        "temperature": 0.2,
+        "context_limit": 128000
+      },
+      "llamacpp/qwen3.6-35b-a3b": {
+        "max_tokens": 8192,
+        "thinking_budget": 3000,
+        "skill_token_budget": 350,
+        "knowledge_token_budget": 300,
+        "temperature": 0.2,
+        "context_limit": 128000
+      },
+      "llamacpp/qwen3.5-9b": {
+        "max_tokens": 8192,
+        "thinking_budget": 3000,
+        "skill_token_budget": 350,
+        "knowledge_token_budget": 300,
+        "temperature": 0.2,
+        "context_limit": 128000
+      },
       "lmstudio/google/gemma-4-12b-qat": {
         "max_tokens": 8192,
         "thinking_budget": 3000,

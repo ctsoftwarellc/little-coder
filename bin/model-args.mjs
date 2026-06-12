@@ -9,13 +9,30 @@ const KNOWN_PROVIDERS = new Set([
   "openrouter",
 ]);
 
+const LMSTUDIO_ALIASES = new Map([
+  ["gemma-4-12b-qat", "google/gemma-4-12b-qat"],
+  ["google/gemma-4-12b-qat", "google/gemma-4-12b-qat"],
+  ["qwopus3.6-27b-coder-mtp", "qwopus3.6-27b-coder-mtp"],
+  ["qwen3.5-9b", "qwen/qwen3.5-9b"],
+  ["qwen/qwen3.5-9b", "qwen/qwen3.5-9b"],
+  ["qwen3.6-35b-a3b", "qwen/qwen3.6-35b-a3b"],
+  ["qwen/qwen3.6-35b-a3b", "qwen/qwen3.6-35b-a3b"],
+]);
+
 function hasExplicitModel(args) {
   return args.some((arg) => arg === "--model" || arg.startsWith("--model="));
 }
 
 function looksLikeModelId(value) {
   if (!value || value.startsWith("-") || /\s/.test(value)) return false;
-  return value.includes("/") || value.endsWith(".gguf") || /^[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+$/.test(value);
+  return LMSTUDIO_ALIASES.has(value) || value.includes("/") || value.endsWith(".gguf") || /^[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+$/.test(value);
+}
+
+function qualifyModel(value) {
+  if (LMSTUDIO_ALIASES.has(value)) return `lmstudio/${LMSTUDIO_ALIASES.get(value)}`;
+  return value.includes("/") && KNOWN_PROVIDERS.has(value.split("/")[0])
+    ? value
+    : `lmstudio/${value}`;
 }
 
 export function normalizeModelArgs(args, env = process.env) {
@@ -23,17 +40,14 @@ export function normalizeModelArgs(args, env = process.env) {
 
   const envModel = env.LITTLE_CODER_MODEL || env.LMSTUDIO_MODEL_ID;
   if (envModel) {
-    const qualified = envModel.includes("/") && KNOWN_PROVIDERS.has(envModel.split("/")[0])
-      ? envModel
-      : `lmstudio/${envModel}`;
-    return ["--model", qualified, ...args];
+    return ["--model", qualifyModel(envModel), ...args];
   }
 
   const [first, ...rest] = args;
   if (!looksLikeModelId(first)) return args;
 
   const provider = first.split("/")[0];
-  const qualified = KNOWN_PROVIDERS.has(provider) ? first : `lmstudio/${first}`;
+  const qualified = KNOWN_PROVIDERS.has(provider) ? first : qualifyModel(first);
   return ["--model", qualified, ...rest];
 }
 
