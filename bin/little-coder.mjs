@@ -37,6 +37,43 @@ if (tooOld) {
 const here = dirname(fileURLToPath(import.meta.url));
 const pkgRoot = resolve(here, "..");
 
+// ---- 2b. Load <pkgRoot>/.env (best-effort, set-once config) ----
+// Lets users keep LMSTUDIO_*, ARCOVA_*, and LITTLE_CODER_* in one git-ignored
+// file instead of re-exporting them every launch. dotenv semantics: a value
+// already present in the real environment WINS (so a shell `$env:X=...` still
+// overrides for a single run). Loaded BEFORE model resolution so a
+// LMSTUDIO_MODEL_ID / LITTLE_CODER_MODEL in .env can supply the default model
+// and you can run `little-coder` with no arguments.
+function loadDotEnv(path) {
+  let text;
+  try {
+    text = readFileSync(path, "utf-8");
+  } catch {
+    return; // no .env — nothing to do
+  }
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const withoutExport = line.startsWith("export ") ? line.slice(7) : line;
+    const eq = withoutExport.indexOf("=");
+    if (eq <= 0) continue;
+    const key = withoutExport.slice(0, eq).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    if (process.env[key] !== undefined) continue; // real env wins
+    let value = withoutExport.slice(eq + 1).trim();
+    // Strip a single layer of matching surrounding quotes; leave backslashes
+    // (Windows paths) untouched.
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    process.env[key] = value;
+  }
+}
+loadDotEnv(join(pkgRoot, ".env"));
+
 // ---- 3. Resolve the bundled pi CLI entry point ----
 // We invoke pi's JS entry directly under the current Node binary instead of
 // the `node_modules/.bin/pi` shim. Two reasons:

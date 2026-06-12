@@ -34,6 +34,9 @@ __pycache__/
 # bundled knowledge base. Anchored with a leading slash to scope to repo root.
 /reference/
 
+# Local config (secrets / machine-specific paths). .env.example is committed.
+.env
+
 # Misc
 *.log
 debug_payload.json

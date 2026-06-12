@@ -58,6 +58,14 @@ export default function (pi: ExtensionAPI) {
     } catch {
       // UI unavailable (RPC/print) — narration is purely cosmetic, ignore.
     }
+    // Also drive pi's own working-message line so the spinner reads
+    // "📖 Reading Foo.php" instead of a bare "Working…", even for users who
+    // don't notice the widget.
+    try {
+      if (lines.length > 0) ctx.ui.setWorkingMessage(lines[0]);
+    } catch {
+      // setWorkingMessage unavailable in this mode — ignore.
+    }
   };
 
   // Re-render with the same body so the header picks up fresh phase/plan/timing
@@ -119,8 +127,21 @@ export default function (pi: ExtensionAPI) {
     }
   });
 
+  // Show activity from the very first moment — before any tool call, while the
+  // model is doing its initial (often long) reasoning pass — so you never sit
+  // on a bare "Working…" wondering if it's alive.
+  pi.on("agent_start", async (_e, ctx) => {
+    if (lastLines.length === 0) render(ctx, ["🤔 Thinking…"]);
+  });
+
   // Header refresh at turn boundaries (timings publish at turn_end).
-  pi.on("turn_start", async (_e, ctx) => refreshHeader(ctx));
+  pi.on("turn_start", async (_e, ctx) => {
+    if (lastLines.length === 0 || lastLines[0]?.startsWith("✓") || lastLines[0]?.startsWith("✗")) {
+      render(ctx, ["🤔 Thinking…"]);
+    } else {
+      refreshHeader(ctx);
+    }
+  });
   pi.on("turn_end", async (_e, ctx) => refreshHeader(ctx));
 
   // Reset between tasks / sessions so a stale verdict doesn't linger.
@@ -135,5 +156,11 @@ export default function (pi: ExtensionAPI) {
   pi.on("agent_end", async (_e, ctx) => {
     buffers.clear();
     phrases.clear();
+    lastLines = [];
+    try {
+      ctx.ui.setWorkingMessage(); // restore pi's default spinner text
+    } catch {
+      // ignore
+    }
   });
 }
