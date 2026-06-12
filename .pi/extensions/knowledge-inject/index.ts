@@ -3,6 +3,7 @@ import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseSkillFile } from "../skill-inject/frontmatter.ts";
+import { frozenPrefixEnabled, setCard } from "../_shared/cards.ts";
 
 // ── Knowledge-entry registry ────────────────────────────────────────────
 // Port of local/knowledge_augment.py. Loads skills/knowledge/*.md plus the
@@ -88,6 +89,10 @@ export default function (pi: ExtensionAPI) {
     loadEntries();
     if (entries.size === 0) return;
 
+    // Frozen-prefix mode (#2): clear last task's tail card up front so a task
+    // that scores no entries doesn't inherit a stale one.
+    if (frozenPrefixEnabled()) setCard("knowledge", "");
+
     const opts: any = (event as any).systemPromptOptions ?? {};
     const lc = opts.littleCoder ?? {};
     const budget: number = lc.knowledgeTokenBudget ?? 200;
@@ -142,6 +147,13 @@ export default function (pi: ExtensionAPI) {
       );
     } catch {
       // best-effort
+    }
+
+    // Frozen-prefix mode (#2): deliver as an appended-tail card instead of a
+    // system-prompt mutation, so token 0 stays static and the KV cache holds.
+    if (frozenPrefixEnabled()) {
+      setCard("knowledge", block);
+      return;
     }
 
     return { systemPrompt: base + block };

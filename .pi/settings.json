@@ -45,7 +45,23 @@
         "temperature": 0.2,
         "context_limit": 128000
       },
+      "lmstudio/google/gemma-4-e4b": {
+        "max_tokens": 8192,
+        "thinking_budget": 3000,
+        "skill_token_budget": 350,
+        "knowledge_token_budget": 300,
+        "temperature": 0.2,
+        "context_limit": 128000
+      },
       "lmstudio/qwopus3.6-27b-coder-mtp": {
+        "max_tokens": 8192,
+        "thinking_budget": 3000,
+        "skill_token_budget": 350,
+        "knowledge_token_budget": 300,
+        "temperature": 0.2,
+        "context_limit": 128000
+      },
+      "lmstudio/gpt-oss-20b-coding-distill": {
         "max_tokens": 8192,
         "thinking_budget": 3000,
         "skill_token_budget": 350,
@@ -62,6 +78,22 @@
         "context_limit": 128000
       },
       "lmstudio/qwen/qwen3.6-35b-a3b": {
+        "max_tokens": 8192,
+        "thinking_budget": 3000,
+        "skill_token_budget": 350,
+        "knowledge_token_budget": 300,
+        "temperature": 0.2,
+        "context_limit": 128000
+      },
+      "lmstudio/openai/gpt-oss-20b": {
+        "max_tokens": 8192,
+        "thinking_budget": 3000,
+        "skill_token_budget": 350,
+        "knowledge_token_budget": 300,
+        "temperature": 0.2,
+        "context_limit": 128000
+      },
+      "lmstudio/nvidia/nemotron-3-nano-4b": {
         "max_tokens": 8192,
         "thinking_budget": 3000,
         "skill_token_budget": 350,

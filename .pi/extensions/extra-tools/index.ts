@@ -1,10 +1,70 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
+import { spawn } from "node:child_process";
 import { globFiles, renderGlobOutcome } from "./glob.ts";
 
 // Ports of tools.py::_glob, _webfetch, _websearch. Pi ships its own grep/find,
 // so those are not re-registered here.
 export default function (pi: ExtensionAPI) {
+  // ── search ─────────────────────────────────────────────────────────────
+  // Compatibility alias for Claude-style agents that emit:
+  //   search { path, query, maxResults }
+  // Pi's native content-search tool is `grep`, but small/local models often
+  // remember the generic `search` name from other harnesses. Registering this
+  // narrow alias turns that drift into a useful ripgrep call instead of
+  // "Tool search not found".
+  pi.registerTool({
+    name: "search",
+    label: "Search",
+    description:
+      "Search file contents for a literal string. Compatibility alias for grep. " +
+      "Use `query` for the text to find and optional `path` to limit the search.",
+    parameters: Type.Object({
+      query: Type.String({ description: "Literal text to search for" }),
+      path: Type.Optional(Type.String({ description: "Directory or file to search (default: cwd)" })),
+      maxResults: Type.Optional(Type.Number({ description: "Maximum matches to return (default: 50)" })),
+    }),
+    async execute(_id, { query, path, maxResults }) {
+      return new Promise((resolve) => {
+        const limit = Math.max(1, Math.min(Number(maxResults ?? 50) || 50, 500));
+        const target = path || process.cwd();
+        const args = ["--line-number", "--color=never", "--hidden", "--fixed-strings", "--max-count", String(limit), "--", query, target];
+        const child = spawn("rg", args, { stdio: ["ignore", "pipe", "pipe"] });
+        let stdout = "";
+        let stderr = "";
+        child.stdout.on("data", (chunk) => {
+          stdout += chunk.toString();
+          if (stdout.length > 50_000) child.kill();
+        });
+        child.stderr.on("data", (chunk) => {
+          stderr += chunk.toString();
+        });
+        child.on("error", (error) => {
+          resolve({
+            content: [{ type: "text", text: `Error: failed to run rg: ${error.message}` }],
+            details: {},
+            isError: true,
+          });
+        });
+        child.on("close", (code) => {
+          if (code !== 0 && code !== 1 && stdout.trim().length === 0) {
+            resolve({
+              content: [{ type: "text", text: `Error: ${stderr.trim() || `rg exited with code ${code}`}` }],
+              details: {},
+              isError: true,
+            });
+            return;
+          }
+          const lines = stdout.trim().split(/\r?\n/).filter(Boolean).slice(0, limit);
+          resolve({
+            content: [{ type: "text", text: lines.length > 0 ? lines.join("\n") : "No matches found" }],
+            details: { resultCount: lines.length },
+          });
+        });
+      });
+    },
+  });
+
   // ── glob ────────────────────────────────────────────────────────────────
   pi.registerTool({
     name: "glob",

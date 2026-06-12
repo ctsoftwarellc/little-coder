@@ -14,6 +14,10 @@ export interface TrajectoryRecord {
   verify: { ran: boolean; passed: boolean; command: string };
   tripwires: string[];
   verified: boolean;
+  // Per-model failure signatures for the self-tuning miner (#9). Optional so
+  // older trajectory rows (written before this field existed) still parse.
+  edit_attempts?: number;
+  edit_failures?: number;
 }
 
 export function sanitizeCommand(command: string): string {
@@ -38,6 +42,8 @@ export default function (pi: ExtensionAPI) {
   let task = "";
   let cwd = process.cwd();
   let verify = { ran: false, passed: false, command: "" };
+  let editAttempts = 0;
+  let editFailures = 0;
 
   pi.on("before_agent_start", async (event, ctx) => {
     cwd = ctx.cwd;
@@ -54,6 +60,11 @@ export default function (pi: ExtensionAPI) {
   });
   pi.on("tool_result", async (event) => {
     const tool = String((event as any).toolName ?? "");
+    const lower = tool.toLowerCase();
+    if (lower === "edit" || lower === "write") {
+      editAttempts++;
+      if ((event as any).isError === true) editFailures++;
+    }
     if (tool === "Verify") {
       verify = {
         ran: true,
@@ -75,6 +86,8 @@ export default function (pi: ExtensionAPI) {
       verify,
       tripwires,
       verified: verify.ran && verify.passed,
+      edit_attempts: editAttempts,
+      edit_failures: editFailures,
     });
   });
 }

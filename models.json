@@ -74,8 +74,44 @@
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
         {
+          "id": "google/gemma-4-e4b",
+          "name": "Gemma 4 E4B (LM Studio)",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 128000,
+          "maxTokens": 8192,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
           "id": "qwopus3.6-27b-coder-mtp",
           "name": "Qwopus 3.6 27B Coder MTP (LM Studio)",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 128000,
+          "maxTokens": 8192,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
+          "id": "gpt-oss-20b-coding-distill",
+          "name": "GPT OSS 20B Coding Distill (LM Studio)",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 128000,
+          "maxTokens": 8192,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
+          "id": "openai/gpt-oss-20b",
+          "name": "GPT OSS 20B (LM Studio)",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 128000,
+          "maxTokens": 8192,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
+          "id": "nvidia/nemotron-3-nano-4b",
+          "name": "Nemotron 3 Nano 4B (LM Studio)",
           "reasoning": true,
           "input": ["text"],
           "contextWindow": 128000,

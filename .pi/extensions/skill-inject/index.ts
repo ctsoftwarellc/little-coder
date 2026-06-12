@@ -3,6 +3,7 @@ import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseSkillFile } from "./frontmatter.ts";
+import { frozenPrefixEnabled, setCard } from "../_shared/cards.ts";
 
 // ── Tool-skill registry ─────────────────────────────────────────────────
 // Port of local/skill_augment.py. Loads skills/tools/*.md once, hooks
@@ -194,6 +195,10 @@ export default function (pi: ExtensionAPI) {
     loadSkills();
     if (skills.size === 0) return;
 
+    // Frozen-prefix mode: clear last task's tail card up front so a task that
+    // selects no skills doesn't inherit a stale card from the previous one.
+    if (frozenPrefixEnabled()) setCard("skill", "");
+
     const opts: any = (event as any).systemPromptOptions ?? {};
     const lc = opts.littleCoder ?? {};
     const budget: number = lc.skillTokenBudget ?? 300;
@@ -249,6 +254,15 @@ export default function (pi: ExtensionAPI) {
       ctx.ui.notify(`skill-inject: ${parts.join(" ")}`, "info");
     } catch {
       // UI unavailable in some run modes — silent best-effort
+    }
+
+    // Frozen-prefix mode (#2): keep token 0 static — push the variable cards to
+    // the appended-tail registry instead of mutating the system prompt. The
+    // tail-cards extension emits them as a `<system-reminder>` at the message
+    // tail each turn, so the KV cache for the frozen prefix survives.
+    if (frozenPrefixEnabled()) {
+      setCard("skill", skillBlock + directive);
+      return;
     }
 
     // Order: [AGENTS.md] [tool skill cards] [research directive].

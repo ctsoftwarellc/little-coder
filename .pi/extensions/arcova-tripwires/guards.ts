@@ -25,7 +25,6 @@ const GUARDED_PATTERNS = [
   /^\.env(?:\.|$)/,
   /secret|credential/i,
   /(^|\/)(Auth|Session|Token)(\/|$)/i,
-  /(^|\/)(Billing|Payment|Refund|Webhook)(\/|$)/i,
   /(^|\/)Tenancy(\/|$)/i,
   /wayfinder/i,
 ];

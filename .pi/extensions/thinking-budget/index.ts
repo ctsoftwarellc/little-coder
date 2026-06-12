@@ -30,6 +30,18 @@ type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
 // `ctx.abort()`, while `pi` is still live and the session hasn't been replaced.
 // No `turn_end` handler, no `setImmediate` — nothing runs against a stale ref.
 //
+// ── Re-prefill interaction (design note #3) ─────────────────────────────────
+// The recovery queues a follow-up, which fires a fresh `before_agent_start`
+// mid-task. skill-inject / knowledge-inject re-run there and can re-select
+// different cards. If those cards land at token 0 (the default path), the
+// restart silently costs a FULL KV re-prefill of the whole conversation on top
+// of the lost turn — 30–60s on 8 GB VRAM, invisibly. The frozen-prefix path
+// (LITTLE_CODER_FROZEN_PREFIX=1, build order #2) routes those cards to the
+// appended tail instead, so token 0 is byte-identical across the restart and
+// only the small tail re-prefills. skill-inject/prefix-stability.test.ts guards
+// that invariant; the harness-timings extension (#1) is how you watch it hold
+// (cached% should not collapse on the restart turn).
+//
 //   1. Count thinking_delta tokens during message_update.
 //   2. On breach: capture the current thinking level, flip thinking to "off",
 //      queue the commit nudge as a follow-up, surface one harness-intervention

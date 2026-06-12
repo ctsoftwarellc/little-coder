@@ -12,7 +12,14 @@ const KNOWN_PROVIDERS = new Set([
 const LMSTUDIO_ALIASES = new Map([
   ["gemma-4-12b-qat", "google/gemma-4-12b-qat"],
   ["google/gemma-4-12b-qat", "google/gemma-4-12b-qat"],
+  ["gemma-4-e4b", "google/gemma-4-e4b"],
+  ["google/gemma-4-e4b", "google/gemma-4-e4b"],
   ["qwopus3.6-27b-coder-mtp", "qwopus3.6-27b-coder-mtp"],
+  ["gpt-oss-20b-coding-distill", "gpt-oss-20b-coding-distill"],
+  ["gpt-oss-20b", "openai/gpt-oss-20b"],
+  ["openai/gpt-oss-20b", "openai/gpt-oss-20b"],
+  ["nemotron-3-nano-4b", "nvidia/nemotron-3-nano-4b"],
+  ["nvidia/nemotron-3-nano-4b", "nvidia/nemotron-3-nano-4b"],
   ["qwen3.5-9b", "qwen/qwen3.5-9b"],
   ["qwen/qwen3.5-9b", "qwen/qwen3.5-9b"],
   ["qwen3.6-35b-a3b", "qwen/qwen3.6-35b-a3b"],
@@ -21,6 +28,20 @@ const LMSTUDIO_ALIASES = new Map([
 
 function hasExplicitModel(args) {
   return args.some((arg) => arg === "--model" || arg.startsWith("--model="));
+}
+
+function normalizeExplicitModelArgs(args) {
+  const next = [...args];
+  for (let i = 0; i < next.length; i++) {
+    const arg = next[i];
+    if (arg === "--model" && typeof next[i + 1] === "string" && LMSTUDIO_ALIASES.has(next[i + 1])) {
+      next[i + 1] = qualifyModel(next[i + 1]);
+    } else if (arg.startsWith("--model=")) {
+      const value = arg.slice("--model=".length);
+      if (LMSTUDIO_ALIASES.has(value)) next[i] = `--model=${qualifyModel(value)}`;
+    }
+  }
+  return next;
 }
 
 function looksLikeModelId(value) {
@@ -36,7 +57,7 @@ function qualifyModel(value) {
 }
 
 export function normalizeModelArgs(args, env = process.env) {
-  if (hasExplicitModel(args)) return args;
+  if (hasExplicitModel(args)) return normalizeExplicitModelArgs(args);
 
   const envModel = env.LITTLE_CODER_MODEL || env.LMSTUDIO_MODEL_ID;
   if (envModel) {
@@ -46,8 +67,7 @@ export function normalizeModelArgs(args, env = process.env) {
   const [first, ...rest] = args;
   if (!looksLikeModelId(first)) return args;
 
-  const provider = first.split("/")[0];
-  const qualified = KNOWN_PROVIDERS.has(provider) ? first : qualifyModel(first);
+  const qualified = qualifyModel(first);
   return ["--model", qualified, ...rest];
 }
 
