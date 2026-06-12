@@ -1,5 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { harnessIntervention } from "../_shared/intervention.ts";
+import { setPhaseStatus } from "../_shared/agent-status.ts";
 import { allowedFor, INITIAL_PHASE, nextPhase, type Phase } from "./phases.ts";
 
 // ── Phase-scoped tool exposure (build order item #6) ────────────────────────
@@ -23,6 +24,7 @@ export default function (pi: ExtensionAPI) {
 
   const applyEnv = () => {
     process.env.LITTLE_CODER_ALLOWED_TOOLS = allowedFor(phase).join(",");
+    setPhaseStatus(phase); // publish for the narrator header
   };
 
   const setPhase = (next: Phase) => {

@@ -25,7 +25,13 @@ function terminateProcess(childPid: number | undefined): void {
   }
 }
 
-function runCommand(command: string, cwd: string, logPath: string, timeoutMs: number): Promise<CommandResult> {
+function runCommand(
+  command: string,
+  cwd: string,
+  logPath: string,
+  timeoutMs: number,
+  onChunk?: (text: string) => void,
+): Promise<CommandResult> {
   return new Promise((resolve) => {
     const child = spawn(command, { cwd, shell: true, windowsHide: true });
     let output = "";
@@ -36,6 +42,13 @@ function runCommand(command: string, cwd: string, logPath: string, timeoutMs: nu
       const text = String(chunk);
       output += text;
       appendFileSync(logPath, text);
+      // Forward to the narrator (Tier 1 live log tail). Best-effort: a throwing
+      // listener must never break the actual verification run.
+      try {
+        onChunk?.(text);
+      } catch {
+        // ignore
+      }
     };
 
     appendFileSync(logPath, `$ ${command}\n`);
@@ -71,7 +84,7 @@ export default function (pi: ExtensionAPI) {
       includeTypes: Type.Optional(Type.Boolean()),
       format: Type.Optional(Type.Boolean()),
     }),
-    async execute(_id, input: VerifyInput) {
+    async execute(_id, input: VerifyInput, _signal, onUpdate) {
       const normalizedInput = normalizeVerifyInput(input);
       const validationError = validateVerifyInput(normalizedInput);
       if (validationError) {
@@ -91,8 +104,11 @@ export default function (pi: ExtensionAPI) {
       let combined = "";
       let exitCode = 0;
       const timeoutMs = verifyTimeoutMs();
+      const stream = onUpdate
+        ? (text: string) => onUpdate({ content: [{ type: "text", text }], details: {} })
+        : undefined;
       for (const command of commands) {
-        const result = await runCommand(command, process.cwd(), logPath, timeoutMs);
+        const result = await runCommand(command, process.cwd(), logPath, timeoutMs, stream);
         combined += `$ ${command}\n${result.output}\n`;
         if (result.exitCode !== 0) {
           exitCode = result.exitCode;

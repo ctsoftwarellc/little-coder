@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { appendFileSync } from "node:fs";
 import { computeTimingStat, formatTimingLine, timingLogRecord, type TimingUsage } from "./format.ts";
+import { setTimingStatus } from "../_shared/agent-status.ts";
 
 // ── Per-turn timing / cache stat (build order item #1) ──────────────────────
 // Surfaces a compact line after every assistant turn so the cache economics the
@@ -49,6 +50,9 @@ export default function (pi: ExtensionAPI) {
     const elapsedMs = requestStartedAt > 0 ? Date.now() - requestStartedAt : 0;
     const stat = computeTimingStat(usage, elapsedMs);
     const line = formatTimingLine(stat);
+
+    // Publish cache% + throughput for the narrator header (#6/#7/#1 status line).
+    setTimingStatus(stat.cachedFraction * 100, stat.tokensPerSecond);
 
     try {
       ctx.ui.setStatus("timings", line);

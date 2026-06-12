@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { applyPlanUpdate, EMPTY_PLAN, formatPlanReminder, type PlanState } from "./plan.ts";
+import { setPlanStatus } from "../_shared/agent-status.ts";
 
 // ── Harness-owned plan re-anchoring (build order item #7) ───────────────────
 // Registers a `Plan` tool the model uses to declare/update its step list, then
@@ -39,6 +40,7 @@ export default function (pi: ExtensionAPI) {
     }),
     async execute(_id, input: { steps?: string[]; current?: number; done?: number[] }) {
       plan = applyPlanUpdate(plan, input);
+      setPlanStatus(plan.current, plan.steps.length); // publish for the narrator header
       const reminder = formatPlanReminder(plan) || "Plan cleared.";
       return {
         content: [{ type: "text", text: `Plan updated.\n${reminder}` }],
