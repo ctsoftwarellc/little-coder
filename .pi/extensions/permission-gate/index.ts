@@ -27,6 +27,13 @@ const BUILTIN_SAFE_PREFIXES: readonly string[] = [
   "cp ", "mv ", "mkdir ", "touch ",
 ];
 
+const ARCOVA_SAFE_PREFIXES: readonly string[] = [
+  "git status", "git diff", "git log", "git show",
+  "rg ", "fd ", "find ", "type ", "Get-Content",
+  "php artisan test", "php vendor/bin/pint",
+  "npm run types", "npm run build",
+];
+
 // Trailing whitespace is meaningful — it acts as a word boundary in startsWith
 // matching ("find " refuses "findbug"). We only strip leading whitespace so
 // callers retain control over that boundary.
@@ -48,6 +55,15 @@ export function isSafeBash(command: string, prefixes: readonly string[] = getSaf
   return prefixes.some((p) => c.startsWith(p));
 }
 
+export function isArcovaSafeBash(command: string): boolean {
+  const c = command.trim();
+  if (/^(env|printenv|set)(\s|$)/i.test(c)) return false;
+  if (/>\s*.*(?:\.env|secret|credential)/i.test(c)) return false;
+  if (/^(npm|pnpm|yarn)\s+(install|add|i)(\s|$)/i.test(c)) return false;
+  if (/^curl\s+(?!(-I|--head)(\s|$))/i.test(c)) return false;
+  return ARCOVA_SAFE_PREFIXES.some((p) => c.startsWith(p));
+}
+
 function getPermissionMode(): "auto" | "accept-all" | "manual" {
   const v = process.env.LITTLE_CODER_PERMISSION_MODE;
   if (v === "accept-all" || v === "manual") return v;
@@ -66,7 +82,10 @@ export default function (pi: ExtensionAPI) {
     // for destructive edits via the TUI.
     if (toolName === "bash" || toolName === "Bash") {
       const cmd = input?.command;
-      if (typeof cmd === "string" && !isSafeBash(cmd)) {
+      const allowed = typeof cmd === "string" && (
+        process.env.ARCOVA_SAFE_MODE === "1" ? isArcovaSafeBash(cmd) : isSafeBash(cmd)
+      );
+      if (typeof cmd === "string" && !allowed) {
         if (mode === "manual") {
           return { block: true, reason: "manual permission mode: bash command not pre-approved" };
         }

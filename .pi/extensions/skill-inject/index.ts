@@ -36,6 +36,8 @@ const INTENT_MAP: Record<string, string[]> = {
   add: ["Edit", "Write"], refactor: ["Edit", "Read"],
   run: ["Bash"], execute: ["Bash"], install: ["Bash"],
   build: ["Bash"], test: ["Bash"],
+  pest: ["Verify", "Bash"], pint: ["Verify"], verify: ["Verify"],
+  laravel: ["Read", "Grep"], tenancy: ["Read", "Grep"], billing: ["Read", "Grep"],
   find: ["Glob", "Grep"], search: ["Grep"],
   grep: ["Grep"], glob: ["Glob"],
   fetch: ["WebFetch"], download: ["WebFetch"], url: ["WebFetch"],

@@ -16,6 +16,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkForUpdate } from "./update-check.mjs";
+import { normalizeModelArgs } from "./model-args.mjs";
 
 // ---- 1. Node version preflight (>= 22.19.0, matching pi.dev) ----
 const MIN_NODE = [22, 19, 0];
@@ -122,7 +123,9 @@ if (exitAfterCheck) {
 // --system-prompt    : load <pkgRoot>/AGENTS.md regardless of cwd
 //
 // Strip our own flags before forwarding to pi so it doesn't reject them.
-const userArgs = process.argv.slice(2).filter((a) => a !== "--no-update-check");
+const userArgs = normalizeModelArgs(
+  process.argv.slice(2).filter((a) => a !== "--no-update-check"),
+);
 const agentsMd = join(pkgRoot, "AGENTS.md");
 const piArgs = [
   "--no-context-files",

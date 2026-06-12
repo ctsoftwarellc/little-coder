@@ -73,6 +73,13 @@
         "skill_token_budget": 300,
         "knowledge_token_budget": 200,
         "temperature": 0.3
+      },
+      "lmstudio/qwen/qwen3.5-9b": {
+        "max_tokens": 4096,
+        "thinking_budget": 3000,
+        "skill_token_budget": 350,
+        "knowledge_token_budget": 300,
+        "temperature": 0.2
       }
     }
   }

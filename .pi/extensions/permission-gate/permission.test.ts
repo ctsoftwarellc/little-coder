@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isSafeBash, parseExtraPrefixes, getSafePrefixes } from "./index.ts";
+import { isArcovaSafeBash, isSafeBash, parseExtraPrefixes, getSafePrefixes } from "./index.ts";
 
 describe("isSafeBash", () => {
   it("allows whitelisted read-only commands", () => {
@@ -76,5 +76,23 @@ describe("getSafePrefixes", () => {
       if (prev === undefined) delete process.env.LITTLE_CODER_BASH_ALLOW;
       else process.env.LITTLE_CODER_BASH_ALLOW = prev;
     }
+  });
+});
+
+describe("isArcovaSafeBash", () => {
+  it("allows only focused Arcova-safe commands", () => {
+    expect(isArcovaSafeBash("git status --short")).toBe(true);
+    expect(isArcovaSafeBash("rg Foo app/")).toBe(true);
+    expect(isArcovaSafeBash("php artisan test --filter=Foo")).toBe(true);
+    expect(isArcovaSafeBash("npm run types")).toBe(true);
+    expect(isArcovaSafeBash("npm run build")).toBe(true);
+  });
+
+  it("blocks arbitrary runtimes, env dumps, unsafe curl, and installs", () => {
+    expect(isArcovaSafeBash("node scripts/foo.mjs")).toBe(false);
+    expect(isArcovaSafeBash("python script.py")).toBe(false);
+    expect(isArcovaSafeBash("env")).toBe(false);
+    expect(isArcovaSafeBash("curl https://example.com")).toBe(false);
+    expect(isArcovaSafeBash("npm install foo")).toBe(false);
   });
 });

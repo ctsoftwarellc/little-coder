@@ -5,6 +5,35 @@
 
 **A coding agent tuned for small local models, built on top of [pi](https://pi.dev).**
 
+## Arcova Laravel Mode
+
+Arcova mode adds deterministic context, verification, tripwires, and telemetry for large
+Laravel/Inertia work while keeping the upstream harness mostly unchanged.
+
+```powershell
+$env:ARCOVA_SAFE_MODE = "1"
+$env:ARCOVA_PHP = "C:\Users\Caleb\.config\herd\bin\php85\php.exe"
+$env:LMSTUDIO_MODEL_ID = "qwen/qwen3.5-9b"
+$env:ARCOVA_VERIFY_TIMEOUT_MS = "45000"
+node C:\Users\Caleb\little-coder\scripts\arcova-map.mjs C:\path\to\laravel-repo
+little-coder qwen/qwen3.5-9b
+```
+
+`LMSTUDIO_MODEL_ID` registers the loaded LM Studio model id. The launcher also accepts an
+unqualified positional model id, so `little-coder qwen/qwen3.5-9b` expands to
+`little-coder --model lmstudio/qwen/qwen3.5-9b`.
+
+`scripts/arcova-map.mjs` generates `.arcova/MAP.md`, `.arcova/RULES.md`, and
+`.arcova/guards.json` inside the Laravel repo. `arcova-context` injects the map and rules before
+variable skill cards for stable prompt caching. The `Verify` tool runs focused Pest checks and
+optional frontend types, writing raw logs to `.arcova/verify-logs/` while returning a compact
+digest. Tripwires block sensitive paths and oversized edits, then write `.arcova/HANDOFF.md`.
+Trajectory logs are sanitized JSONL files under `.arcova/trajectories/`.
+
+Small local models should make narrow, pattern-following Laravel changes and verify each edit.
+They should hand off auth/session/token, billing/payment/webhook, tenancy-boundary, existing
+migration, or broad multi-file changes when tripwires fire.
+
 The research story behind all this — why scaffold–model fit matters, how a 9.7 B Qwen beat frontier entries on Aider Polyglot, and what the load-bearing mechanisms actually do — is written up on Substack: **[*Honey, I Shrunk the Coding Agent*](https://open.substack.com/pub/itayinbarr/p/honey-i-shrunk-the-coding-agent)**. Start there if you want the "why"; stay here for the "how".
 
 ## How it relates to pi

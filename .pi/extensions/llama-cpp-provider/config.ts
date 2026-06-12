@@ -117,12 +117,20 @@ function readIfPresent(path: string): { kind: "ok"; data: ModelsFile } | { kind:
 export function applyEnvOverrides(providers: Record<string, ProviderEntry>, env: NodeJS.ProcessEnv = process.env): Record<string, ProviderEntry> {
   const out: Record<string, ProviderEntry> = {};
   for (const [name, entry] of Object.entries(providers)) {
+    let next = entry;
     const envVar = LEGACY_BASE_URL_ENV[name];
     if (envVar && env[envVar]) {
-      out[name] = { ...entry, baseUrl: env[envVar]! };
-    } else {
-      out[name] = entry;
+      next = { ...next, baseUrl: env[envVar]! };
     }
+    if (name === "lmstudio" && env.LMSTUDIO_MODEL_ID) {
+      const modelId = env.LMSTUDIO_MODEL_ID;
+      const exists = next.models.some((model) => model.id === modelId);
+      next = {
+        ...next,
+        models: exists ? next.models : [...next.models, fillModelDefaults({ id: modelId, reasoning: true }, name, next.models.length)],
+      };
+    }
+    out[name] = next;
   }
   return out;
 }

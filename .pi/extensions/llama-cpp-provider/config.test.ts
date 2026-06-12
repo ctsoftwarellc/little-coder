@@ -95,6 +95,11 @@ describe("applyEnvOverrides", () => {
     const out = applyEnvOverrides(providers, { LMSTUDIO_BASE_URL: "http://127.0.0.1:5678/v1" });
     expect(out.lmstudio.baseUrl).toBe("http://127.0.0.1:5678/v1");
   });
+  it("LMSTUDIO_MODEL_ID registers the loaded LM Studio model id", () => {
+    const providers = { lmstudio: sampleProvider("http://127.0.0.1:1234/v1", "local-model") };
+    const out = applyEnvOverrides(providers, { LMSTUDIO_MODEL_ID: "qwen/qwen3.5-9b" });
+    expect(out.lmstudio.models.find((m) => m.id === "qwen/qwen3.5-9b")).toBeDefined();
+  });
   it("does not alter providers without a known env knob", () => {
     const providers = { custom: sampleProvider("http://file/v1", "m") };
     const out = applyEnvOverrides(providers, { LLAMACPP_BASE_URL: "http://env/v1" });
