@@ -63,6 +63,7 @@ export function isArcovaSafeBash(command: string): boolean {
   if (/>\s*.*(?:\.env|secret|credential)/i.test(c)) return false;
   if (/^(npm|pnpm|yarn)\s+(install|add|i)(\s|$)/i.test(c)) return false;
   if (/^curl\s+(?!(-I|--head)(\s|$))/i.test(c)) return false;
+  if (/^[A-Za-z]:\\.*\\php(?:\d+)?\\php\.exe\s+(artisan test|vendor\/bin\/pint)(\s|$)/i.test(c)) return true;
   return ARCOVA_SAFE_PREFIXES.some((p) => c.startsWith(p));
 }
 

@@ -87,6 +87,8 @@ describe("isArcovaSafeBash", () => {
     expect(isArcovaSafeBash("Select-String -Path app/Foo.php -Pattern tenant")).toBe(true);
     expect(isArcovaSafeBash("Test-Path .arcova/MAP.md")).toBe(true);
     expect(isArcovaSafeBash("php artisan test --filter=Foo")).toBe(true);
+    expect(isArcovaSafeBash("C:\\Users\\Caleb\\.config\\herd\\bin\\php84\\php.exe artisan test tests\\Feature\\PlaceholderStylingTest.php")).toBe(true);
+    expect(isArcovaSafeBash("C:\\Users\\Caleb\\.config\\herd\\bin\\php85\\php.exe vendor/bin/pint --dirty")).toBe(true);
     expect(isArcovaSafeBash("npm run types")).toBe(true);
     expect(isArcovaSafeBash("npm run build")).toBe(true);
   });
