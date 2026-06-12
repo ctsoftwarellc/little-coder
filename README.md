@@ -36,6 +36,13 @@ migration, or broad multi-file changes when tripwires fire.
 
 See `docs/arcova-lmstudio.md` for the LM Studio environment and constrained tool-output setup.
 
+**Full agent mode.** A set of harness upgrades (KV-cache-aware prompt freezing, ambient
+`php -l`, fuzzy edits, phase-scoped tools, a harness-owned plan, constrained tool calls,
+trajectory mining) plus a live "narrator" UX are documented in `docs/full-agent-mode.md`.
+Store your config once in a git-ignored `.env` at the repo root (copy `.env.example`) — the
+launcher loads it before resolving the model, so `little-coder` can run with no arguments.
+Reusable benchmark report templates live in `benchmarks/templates/`.
+
 Export verified Arcova trajectories for later SFT experiments:
 
 ```powershell
@@ -50,6 +57,13 @@ node C:\Users\Caleb\little-coder\scripts\arcova-rank-map.mjs C:\path\to\laravel-
 
 Arcova also registers three trimmed read-only helper tools for Laravel work:
 `ArcovaListRoutes`, `ArcovaDatabaseSchema`, and `ArcovaSearchDocs`.
+
+The cockpit extension adds a persistent mission panel to the TUI: current
+objective, model/context, live activity, touched files, risk radar, verification
+state, and open needs. Use `/mission <objective>` to label the run, `/cockpit`
+to redraw the panel, `/diff` for a git diff stat, `/risk` for current blockers,
+and `/export-session` to write a black-box Markdown report under
+`docs/agent-sessions/`.
 
 The research story behind all this — why scaffold–model fit matters, how a 9.7 B Qwen beat frontier entries on Aider Polyglot, and what the load-bearing mechanisms actually do — is written up on Substack: **[*Honey, I Shrunk the Coding Agent*](https://open.substack.com/pub/itayinbarr/p/honey-i-shrunk-the-coding-agent)**. Start there if you want the "why"; stay here for the "how".
 

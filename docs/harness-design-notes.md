@@ -5,6 +5,11 @@
 The framing: what Claude Code's harness actually does for the model inside it,
 translated to a 9B–35B local model on laptop-class hardware.*
 
+> **Status:** all nine build-order items below are now implemented as pi extensions,
+> plus a live "narrator" UX. See [`full-agent-mode.md`](./full-agent-mode.md) for how to
+> run them, the env flags, and benchmark templates. This file remains the design
+> rationale ("why"); that file is the operational guide ("how").
+
 ---
 
 ## First reaction
