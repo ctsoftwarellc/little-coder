@@ -26,7 +26,8 @@ below are implemented in this fork when their files exist in this repository. Ge
 - [x] **Laravel recipe knowledge cards** - endpoint, Pest test, tenancy, queued job, and migration
   cards in `skills/knowledge/`.
 - [x] **`Verify` tool skill card** - `skills/tools/verify.md`.
-- [ ] **Task-loop protocol card** - not yet added as a separate protocol card.
+- [x] **Task-loop protocol card** - `skills/protocols/arcova_task_loop.md` provides the
+  keyword-triggered Arcova eval/task entry point.
 - [x] **INTENT_MAP additions** - `pest`, `pint`, `verify`, `laravel`, `tenancy`, and `billing`
   keywords route toward relevant tools.
 
@@ -34,20 +35,26 @@ below are implemented in this fork when their files exist in this repository. Ge
 
 - [x] **`scripts/arcova-map.mjs`** - generates `.arcova/MAP.md`, `.arcova/RULES.md`, and
   `.arcova/guards.json` in a Laravel repo.
-- [ ] **Arcova target repo artifacts committed** - generated per Laravel checkout, not stored here.
+- [x] **Arcova target repo artifacts generated** - current target checkout has `.arcova/MAP.md`,
+  `.arcova/RULES.md`, and `.arcova/guards.json`.
 
 ## Phase 4 - Safe Mode & Model Setup
 
 - [x] **`ARCOVA_SAFE_MODE=1` permission gate hardening** - narrows shell allow-list for Arcova work.
-- [ ] **Model profile registration** - Devstral/Qwen model files are environment-specific.
-- [ ] **Constrained decoding at serving layer** - still a serving configuration task.
+- [x] **Model profile registration** - `lmstudio/qwen/qwen3.5-9b` has a tuned profile and
+  `LMSTUDIO_MODEL_ID` registration support.
+- [x] **Constrained decoding at serving layer** - documented LM Studio structured/tool-call setup in
+  `docs/arcova-lmstudio.md`.
 
 ## Phase 5 - Later / Nice-To-Have
 
-- [ ] Curated Laravel Boost MCP subset with output trimming.
-- [ ] Tree-sitter PHP repo map with PageRank if the convention map is insufficient.
-- [ ] Fine-tune loop once `.arcova/trajectories/` has enough verified sessions.
-- [ ] Full PowerShell-aware upstream bash whitelist polish.
+- [x] Curated Laravel Boost-style subset with output trimming - `arcova-boost` registers
+  read-only `ArcovaListRoutes`, `ArcovaDatabaseSchema`, and `ArcovaSearchDocs` tools.
+- [x] PHP repo map with PageRank - `scripts/arcova-rank-map.mjs` generates
+  `.arcova/RANKED_MAP.md` from a dependency-free PHP symbol/reference graph.
+- [x] Fine-tune export loop - `scripts/arcova-export-trajectories.mjs` converts verified
+  `.arcova/trajectories/` rows into SFT JSONL.
+- [x] Full PowerShell-aware upstream bash whitelist polish for Arcova safe mode read/search commands.
 
 ## Usage
 

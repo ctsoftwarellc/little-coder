@@ -16,7 +16,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkForUpdate } from "./update-check.mjs";
-import { normalizeModelArgs } from "./model-args.mjs";
+import { modelFromArgs, normalizeModelArgs } from "./model-args.mjs";
 
 // ---- 1. Node version preflight (>= 22.19.0, matching pi.dev) ----
 const MIN_NODE = [22, 19, 0];
@@ -126,6 +126,8 @@ if (exitAfterCheck) {
 const userArgs = normalizeModelArgs(
   process.argv.slice(2).filter((a) => a !== "--no-update-check"),
 );
+const selectedModel = modelFromArgs(userArgs);
+if (selectedModel) process.env.LITTLE_CODER_MODEL = selectedModel;
 const agentsMd = join(pkgRoot, "AGENTS.md");
 const piArgs = [
   "--no-context-files",

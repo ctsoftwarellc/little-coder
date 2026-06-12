@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeModelArgs } from "./model-args.mjs";
+import { modelFromArgs, normalizeModelArgs } from "./model-args.mjs";
 
 describe("normalizeModelArgs", () => {
   it("keeps explicit --model unchanged", () => {
@@ -20,5 +20,10 @@ describe("normalizeModelArgs", () => {
 
   it("does not rewrite normal prompts", () => {
     expect(normalizeModelArgs(["What does this app do?"], {})).toEqual(["What does this app do?"]);
+  });
+
+  it("extracts model from normalized args", () => {
+    expect(modelFromArgs(["--model", "lmstudio/qwen/qwen3.5-9b"])).toBe("lmstudio/qwen/qwen3.5-9b");
+    expect(modelFromArgs(["--model=ollama/qwen3.5"])).toBe("ollama/qwen3.5");
   });
 });

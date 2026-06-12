@@ -36,3 +36,12 @@ export function normalizeModelArgs(args, env = process.env) {
   const qualified = KNOWN_PROVIDERS.has(provider) ? first : `lmstudio/${first}`;
   return ["--model", qualified, ...rest];
 }
+
+export function modelFromArgs(args) {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--model" && typeof args[i + 1] === "string") return args[i + 1];
+    if (arg.startsWith("--model=")) return arg.slice("--model=".length);
+  }
+  return undefined;
+}

@@ -83,6 +83,9 @@ describe("isArcovaSafeBash", () => {
   it("allows only focused Arcova-safe commands", () => {
     expect(isArcovaSafeBash("git status --short")).toBe(true);
     expect(isArcovaSafeBash("rg Foo app/")).toBe(true);
+    expect(isArcovaSafeBash("Get-ChildItem -Recurse -Filter *.php")).toBe(true);
+    expect(isArcovaSafeBash("Select-String -Path app/Foo.php -Pattern tenant")).toBe(true);
+    expect(isArcovaSafeBash("Test-Path .arcova/MAP.md")).toBe(true);
     expect(isArcovaSafeBash("php artisan test --filter=Foo")).toBe(true);
     expect(isArcovaSafeBash("npm run types")).toBe(true);
     expect(isArcovaSafeBash("npm run build")).toBe(true);
@@ -94,5 +97,6 @@ describe("isArcovaSafeBash", () => {
     expect(isArcovaSafeBash("env")).toBe(false);
     expect(isArcovaSafeBash("curl https://example.com")).toBe(false);
     expect(isArcovaSafeBash("npm install foo")).toBe(false);
+    expect(isArcovaSafeBash("Set-Content .env foo")).toBe(false);
   });
 });

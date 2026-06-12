@@ -2,7 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
-import { evaluateTripwires } from "./guards.ts";
+import { evaluateTripwires, loadTripwireConfig } from "./guards.ts";
 
 const touched = new Set<string>();
 let taskSummary = "";
@@ -12,7 +12,7 @@ function inputPath(input: Record<string, unknown>): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
-function writeHandoff(cwd: string, reason: string): string {
+function writeHandoff(cwd: string, reason: string, files: string[]): string {
   const dir = join(cwd, ".arcova");
   mkdirSync(dir, { recursive: true });
   let diffSummary = "";
@@ -31,7 +31,7 @@ function writeHandoff(cwd: string, reason: string): string {
     taskSummary || "(unavailable)",
     "",
     "## Files Touched",
-    ...Array.from(touched).sort().map((file) => `- ${file}`),
+    ...Array.from(new Set(files)).sort().map((file) => `- ${file}`),
     "",
     "## Suggested Next Verifier",
     "- Run focused tests with the `Verify` tool, then review guarded paths manually.",
@@ -47,7 +47,7 @@ function writeHandoff(cwd: string, reason: string): string {
 
 export default function (pi: ExtensionAPI) {
   pi.on("before_agent_start", async (event) => {
-    if (!taskSummary) taskSummary = (event.prompt ?? "").slice(0, 500);
+    taskSummary = (event.prompt ?? "").slice(0, 500);
   });
 
   pi.on("tool_call", async (event, ctx) => {
@@ -56,11 +56,17 @@ export default function (pi: ExtensionAPI) {
     const input = ((event as any).input ?? {}) as Record<string, unknown>;
     const path = inputPath(input);
     if (!path) return;
-    touched.add(path);
-    const result = evaluateTripwires(Array.from(touched));
-    if (!result.block) return;
+    const candidateTouched = [...Array.from(touched), path];
+    const result = evaluateTripwires(candidateTouched, { config: loadTripwireConfig(ctx.cwd) });
+    if (!result.block) {
+      touched.add(path);
+      return;
+    }
     const reason = result.reasons.join("; ");
-    const handoff = writeHandoff(ctx.cwd, reason);
-    return { block: true, reason: `${reason}\nWrote handoff: ${handoff}` };
+    const handoff = writeHandoff(ctx.cwd, reason, candidateTouched);
+    return {
+      block: true,
+      reason: `${reason}\nWrote handoff: ${handoff}\nStop now. Do not retry the edit, read protected files, or continue verification for this task.`,
+    };
   });
 }

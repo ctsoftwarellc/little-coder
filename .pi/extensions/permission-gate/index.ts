@@ -30,6 +30,7 @@ const BUILTIN_SAFE_PREFIXES: readonly string[] = [
 const ARCOVA_SAFE_PREFIXES: readonly string[] = [
   "git status", "git diff", "git log", "git show",
   "rg ", "fd ", "find ", "type ", "Get-Content",
+  "Get-ChildItem", "Select-String", "Test-Path",
   "php artisan test", "php vendor/bin/pint",
   "npm run types", "npm run build",
 ];
@@ -58,6 +59,7 @@ export function isSafeBash(command: string, prefixes: readonly string[] = getSaf
 export function isArcovaSafeBash(command: string): boolean {
   const c = command.trim();
   if (/^(env|printenv|set)(\s|$)/i.test(c)) return false;
+  if (/^(Set-Content|Add-Content|New-Item|Remove-Item|Move-Item|Copy-Item)(\s|$)/i.test(c)) return false;
   if (/>\s*.*(?:\.env|secret|credential)/i.test(c)) return false;
   if (/^(npm|pnpm|yarn)\s+(install|add|i)(\s|$)/i.test(c)) return false;
   if (/^curl\s+(?!(-I|--head)(\s|$))/i.test(c)) return false;

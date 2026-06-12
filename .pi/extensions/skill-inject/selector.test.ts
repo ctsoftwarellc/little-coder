@@ -17,6 +17,11 @@ const INTENT_MAP: Record<string, string[]> = {
   add: ["Edit", "Write"], refactor: ["Edit", "Read"],
   run: ["Bash"], execute: ["Bash"], install: ["Bash"],
   build: ["Bash"], test: ["Bash"],
+  pest: ["Verify", "Bash"], pint: ["Verify"], verify: ["Verify"],
+  laravel: ["Read", "Grep"], tenancy: ["Read", "Grep"], billing: ["Read", "Grep"],
+  routes: ["ArcovaListRoutes"], route: ["ArcovaListRoutes"],
+  schema: ["ArcovaDatabaseSchema"], migration: ["ArcovaDatabaseSchema"],
+  docs: ["ArcovaSearchDocs"], planning: ["ArcovaSearchDocs"],
   find: ["Glob", "Grep"], search: ["Grep"],
   grep: ["Grep"], glob: ["Glob"],
   fetch: ["WebFetch"], download: ["WebFetch"], url: ["WebFetch"],
@@ -60,10 +65,10 @@ describe("skills directory loads from repo", () => {
   const here = dirname(fileURLToPath(import.meta.url));
   const toolsDir = join(here, "..", "..", "..", "skills", "tools");
 
-  it("exists and has 13 markdown files", () => {
+  it("exists and has 17 markdown files", () => {
     expect(existsSync(toolsDir)).toBe(true);
     const files = readdirSync(toolsDir).filter((f) => f.endsWith(".md"));
-    expect(files.length).toBe(13);
+    expect(files.length).toBe(17);
   });
 
   it("every tool skill has target_tool in frontmatter", () => {

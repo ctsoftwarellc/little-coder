@@ -19,6 +19,7 @@
   "files": [
     "bin/",
     "scripts/",
+    "docs/",
     "AGENTS.md",
     "skills/",
     ".pi/extensions/",

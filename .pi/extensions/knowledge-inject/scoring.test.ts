@@ -59,9 +59,9 @@ describe("knowledge directory loads from repo", () => {
     expect(readdirSync(kDir).filter((f) => f.endsWith(".md")).length).toBe(18);
   });
 
-  it("protocols dir has 3 files", () => {
+  it("protocols dir has 4 files", () => {
     expect(existsSync(pDir)).toBe(true);
-    expect(readdirSync(pDir).filter((f) => f.endsWith(".md")).length).toBe(3);
+    expect(readdirSync(pDir).filter((f) => f.endsWith(".md")).length).toBe(4);
   });
 
   it("every knowledge entry has topic + keywords in frontmatter", () => {
@@ -77,5 +77,13 @@ describe("knowledge directory loads from repo", () => {
   it("workspace_docs declares requires_tools", () => {
     const parsed = parseSkillFile(readFileSync(join(kDir, "workspace_docs.md"), "utf-8"));
     expect(parsed!.frontmatter.requires_tools).toEqual(["Read", "Glob"]);
+  });
+
+  it("arcova task loop protocol is keyword-triggered and requires verify", () => {
+    const parsed = parseSkillFile(readFileSync(join(pDir, "arcova_task_loop.md"), "utf-8"));
+    expect(parsed!.frontmatter.topic).toBe("arcova_task_loop");
+    expect(parsed!.frontmatter.keywords).toContain("arcova task loop");
+    expect(parsed!.frontmatter.keywords).toContain("test.md");
+    expect(parsed!.frontmatter.requires_tools).toEqual(["Read", "Grep", "Verify"]);
   });
 });

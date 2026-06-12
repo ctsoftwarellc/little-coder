@@ -34,6 +34,23 @@ Small local models should make narrow, pattern-following Laravel changes and ver
 They should hand off auth/session/token, billing/payment/webhook, tenancy-boundary, existing
 migration, or broad multi-file changes when tripwires fire.
 
+See `docs/arcova-lmstudio.md` for the LM Studio environment and constrained tool-output setup.
+
+Export verified Arcova trajectories for later SFT experiments:
+
+```powershell
+node C:\Users\Caleb\little-coder\scripts\arcova-export-trajectories.mjs C:\path\to\laravel-repo
+```
+
+Generate a ranked PHP entrypoint map when the static Arcova map is not enough:
+
+```powershell
+node C:\Users\Caleb\little-coder\scripts\arcova-rank-map.mjs C:\path\to\laravel-repo
+```
+
+Arcova also registers three trimmed read-only helper tools for Laravel work:
+`ArcovaListRoutes`, `ArcovaDatabaseSchema`, and `ArcovaSearchDocs`.
+
 The research story behind all this — why scaffold–model fit matters, how a 9.7 B Qwen beat frontier entries on Aider Polyglot, and what the load-bearing mechanisms actually do — is written up on Substack: **[*Honey, I Shrunk the Coding Agent*](https://open.substack.com/pub/itayinbarr/p/honey-i-shrunk-the-coding-agent)**. Start there if you want the "why"; stay here for the "how".
 
 ## How it relates to pi
