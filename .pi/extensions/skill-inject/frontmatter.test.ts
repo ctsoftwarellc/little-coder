@@ -51,6 +51,18 @@ body`;
     expect(p!.frontmatter.requires_tools).toEqual(["Read", "Glob"]);
   });
 
+  it("parses CRLF frontmatter (the shipped skill cards use \\r\\n)", () => {
+    const text = [
+      "---", "name: edit-guidance", "type: tool-guidance", "target_tool: Edit",
+      "priority: 10", "token_cost: 150", "user-invocable: false", "---", "## Edit Tool", "body",
+    ].join("\r\n");
+    const p = parseSkillFile(text);
+    expect(p).not.toBeNull();
+    expect(p!.frontmatter.target_tool).toBe("Edit");
+    expect(p!.frontmatter.token_cost).toBe(150);
+    expect(p!.frontmatter["user-invocable"]).toBe(false);
+  });
+
   it("returns null on missing frontmatter", () => {
     expect(parseSkillFile("no frontmatter here")).toBeNull();
   });

@@ -16,7 +16,11 @@ export function parseSkillFile(text: string): ParsedSkill | null {
   const fmText = parts[1].trim();
   const body = parts.slice(2).join("---").trim();
   const fm: Frontmatter = {};
-  for (const line of fmText.split("\n")) {
+  // Split on either line ending. CRLF files (the original little-coder skill
+  // cards ship with \r\n) otherwise leave a trailing \r on every line, which
+  // the value regex below rejects (JS `.` doesn't match \r), so only the last
+  // line — whose \r was stripped by the trim above — would parse.
+  for (const line of fmText.split(/\r?\n/)) {
     const m = line.match(/^(\w[\w_-]*)\s*:\s*(.*)$/);
     if (!m) continue;
     const key = m[1].trim();

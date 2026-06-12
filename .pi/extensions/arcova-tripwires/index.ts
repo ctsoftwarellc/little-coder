@@ -7,6 +7,10 @@ import { evaluateTripwires, loadTripwireConfig } from "./guards.ts";
 const touched = new Set<string>();
 let taskSummary = "";
 
+function enabled(): boolean {
+  return process.env.ARCOVA_TRIPWIRES === "1";
+}
+
 function inputPath(input: Record<string, unknown>): string | undefined {
   const value = input.path ?? input.file_path;
   return typeof value === "string" ? value : undefined;
@@ -47,10 +51,12 @@ function writeHandoff(cwd: string, reason: string, files: string[]): string {
 
 export default function (pi: ExtensionAPI) {
   pi.on("before_agent_start", async (event) => {
+    if (!enabled()) return;
     taskSummary = (event.prompt ?? "").slice(0, 500);
   });
 
   pi.on("tool_call", async (event, ctx) => {
+    if (!enabled()) return;
     const tool = String((event as any).toolName ?? "").toLowerCase();
     if (tool !== "write" && tool !== "edit") return;
     const input = ((event as any).input ?? {}) as Record<string, unknown>;

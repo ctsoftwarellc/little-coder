@@ -1,6 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import { spawn } from "node:child_process";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { relative, resolve } from "node:path";
 import { globFiles, renderGlobOutcome } from "./glob.ts";
 
 // Ports of tools.py::_glob, _webfetch, _websearch. Pi ships its own grep/find,
@@ -25,43 +26,70 @@ export default function (pi: ExtensionAPI) {
       maxResults: Type.Optional(Type.Number({ description: "Maximum matches to return (default: 50)" })),
     }),
     async execute(_id, { query, path, maxResults }) {
-      return new Promise((resolve) => {
+      try {
         const limit = Math.max(1, Math.min(Number(maxResults ?? 50) || 50, 500));
-        const target = path || process.cwd();
-        const args = ["--line-number", "--color=never", "--hidden", "--fixed-strings", "--max-count", String(limit), "--", query, target];
-        const child = spawn("rg", args, { stdio: ["ignore", "pipe", "pipe"] });
-        let stdout = "";
-        let stderr = "";
-        child.stdout.on("data", (chunk) => {
-          stdout += chunk.toString();
-          if (stdout.length > 50_000) child.kill();
-        });
-        child.stderr.on("data", (chunk) => {
-          stderr += chunk.toString();
-        });
-        child.on("error", (error) => {
-          resolve({
-            content: [{ type: "text", text: `Error: failed to run rg: ${error.message}` }],
-            details: {},
-            isError: true,
-          });
-        });
-        child.on("close", (code) => {
-          if (code !== 0 && code !== 1 && stdout.trim().length === 0) {
-            resolve({
-              content: [{ type: "text", text: `Error: ${stderr.trim() || `rg exited with code ${code}`}` }],
-              details: {},
-              isError: true,
-            });
+        const root = resolve(path || process.cwd());
+        const skipDirs = new Set([".git", "node_modules", "vendor", "dist", "build", ".next", ".nuxt", "coverage", "storage"]);
+        const results: string[] = [];
+        let scanned = 0;
+        const maxScanned = 5000;
+
+        const searchFile = async (file: string) => {
+          if (results.length >= limit) return;
+          let text = "";
+          try {
+            text = await readFile(file, "utf-8");
+          } catch {
             return;
           }
-          const lines = stdout.trim().split(/\r?\n/).filter(Boolean).slice(0, limit);
-          resolve({
-            content: [{ type: "text", text: lines.length > 0 ? lines.join("\n") : "No matches found" }],
-            details: { resultCount: lines.length },
-          });
-        });
-      });
+          const rel = relative(root, file).replace(/\\/g, "/") || file;
+          const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+          for (let i = 0; i < lines.length && results.length < limit; i++) {
+            const line = lines[i];
+            if (!line.includes(query)) continue;
+            const trimmed = line.length > 300 ? `${line.slice(0, 300)}...` : line;
+            results.push(`${rel}:${i + 1}: ${trimmed}`);
+          }
+        };
+
+        const walk = async (entry: string) => {
+          if (results.length >= limit || scanned >= maxScanned) return;
+          let s;
+          try {
+            s = await stat(entry);
+          } catch {
+            return;
+          }
+          scanned++;
+          if (s.isFile()) {
+            await searchFile(entry);
+            return;
+          }
+          if (!s.isDirectory()) return;
+          let children;
+          try {
+            children = await readdir(entry, { withFileTypes: true });
+          } catch {
+            return;
+          }
+          for (const child of children) {
+            if (results.length >= limit || scanned >= maxScanned) break;
+            if (child.isDirectory() && skipDirs.has(child.name)) continue;
+            await walk(resolve(entry, child.name));
+          }
+        };
+
+        await walk(root);
+        let text = results.length > 0 ? results.join("\n") : "No matches found";
+        if (scanned >= maxScanned) text += `\n\n[Search stopped after scanning ${maxScanned} filesystem entries; narrow path for more complete results]`;
+        return { content: [{ type: "text", text }], details: { resultCount: results.length, scanned } };
+      } catch (e) {
+        return {
+          content: [{ type: "text", text: `Error: ${(e as Error).message}` }],
+          details: {},
+          isError: true,
+        };
+      }
     },
   });
 

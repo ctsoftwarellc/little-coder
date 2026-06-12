@@ -1,10 +1,12 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 // Port of tools.py::_SAFE_PREFIXES + agent.py::_check_permission. Bash
-// commands not matching the whitelist are blocked in "auto" mode. In
-// "accept-all" mode all commands pass (benchmark runs set this explicitly).
-// Write/Edit confirmations are deferred to the TUI's own prompt; we simply
-// add an extra guardrail on bash here to match little-coder's behavior.
+// commands are permissive by default so local development workflows can run
+// normal verification commands (Windows Herd PHP paths, cmd/powershell probes,
+// project-specific scripts) without fighting the harness. Set
+// LITTLE_CODER_PERMISSION_MODE=auto to re-enable whitelist blocking, or
+// LITTLE_CODER_PERMISSION_MODE=manual for strict pre-approval behavior.
+// Write/Edit confirmations are deferred to the TUI's own prompt.
 //
 // Per-deployment customization (issue #15):
 //   LITTLE_CODER_PERMISSION_MODE=auto|accept-all|manual
@@ -69,8 +71,8 @@ export function isArcovaSafeBash(command: string): boolean {
 
 function getPermissionMode(): "auto" | "accept-all" | "manual" {
   const v = process.env.LITTLE_CODER_PERMISSION_MODE;
-  if (v === "accept-all" || v === "manual") return v;
-  return "auto";
+  if (v === "auto" || v === "manual") return v;
+  return "accept-all";
 }
 
 export default function (pi: ExtensionAPI) {

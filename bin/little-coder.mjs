@@ -128,12 +128,23 @@ const userArgs = normalizeModelArgs(
 );
 const selectedModel = modelFromArgs(userArgs);
 if (selectedModel) process.env.LITTLE_CODER_MODEL = selectedModel;
+const hasToolSelection = userArgs.some((a) =>
+  a === "--tools" ||
+  a === "-t" ||
+  a.startsWith("--tools=") ||
+  a === "--no-tools" ||
+  a === "-nt" ||
+  a === "--no-builtin-tools" ||
+  a === "-nbt"
+);
+const defaultToolArgs = hasToolSelection ? [] : ["--tools", "read,bash,edit,write,grep,find,ls"];
 const agentsMd = join(pkgRoot, "AGENTS.md");
 const piArgs = [
   "--no-context-files",
   "--no-extensions",
   ...(existsSync(agentsMd) ? ["--system-prompt", agentsMd] : []),
   ...extArgs,
+  ...defaultToolArgs,
   ...userArgs,
 ];
 

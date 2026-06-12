@@ -269,14 +269,15 @@ Set `id` to whatever model your server reports, and `baseUrl` to its `/v1` endpo
 
 ## Permissions
 
-little-coder gates `Bash` tool calls against a built-in safe-prefix whitelist (`ls`, `cat`, `head`, `tail`, `git log/status/diff`, `find`, `grep`, `cp`, `mv`, `mkdir`, `touch`, etc.) before pi's own confirmation flow ever sees them. `rm` and `sudo` are intentionally not on the list — add them via `LITTLE_CODER_BASH_ALLOW` per deployment if you really need them.
+By default, little-coder lets `Bash` tool calls pass through to pi's normal execution path so local verification commands work without fighting the harness. If you want the older restrictive behavior, set `LITTLE_CODER_PERMISSION_MODE=auto`; that gates bash against a built-in safe-prefix whitelist (`ls`, `cat`, `head`, `tail`, `git log/status/diff`, `find`, `grep`, `cp`, `mv`, `mkdir`, `touch`, etc.).
 
 Two env vars control the gate:
 
 | Env var | Values | Effect |
 |---|---|---|
-| `LITTLE_CODER_PERMISSION_MODE` | `auto` *(default)* / `accept-all` / `manual` | `auto`: block any bash command not on the whitelist. `accept-all`: skip the gate entirely, every bash call passes (the benchmark runner sets this). `manual`: same as `auto` but with a different rejection message. |
+| `LITTLE_CODER_PERMISSION_MODE` | `accept-all` *(default)* / `auto` / `manual` | `accept-all`: skip the extra little-coder gate. `auto`: block any bash command not on the whitelist. `manual`: same as `auto` but with a different rejection message. |
 | `LITTLE_CODER_BASH_ALLOW` | comma-separated prefixes | Extra allow-prefixes merged with the built-in list. **Trailing whitespace is meaningful**: `"make "` allows `make test` but not `makefoo`; `"make"` allows both. |
+| `ARCOVA_TRIPWIRES` | `0` *(default)* / `1` | Enable Arcova guarded-path and large-change hard stops. Leave unset for normal local development. |
 
 Examples:
 
@@ -284,7 +285,10 @@ Examples:
 # Add 'make' (with word-boundary) and 'docker compose ps' on top of the defaults
 export LITTLE_CODER_BASH_ALLOW="make ,docker compose ps"
 
-# Skip the gate entirely (use this only inside controlled environments)
+# Re-enable the restrictive bash whitelist
+export LITTLE_CODER_PERMISSION_MODE=auto
+
+# Explicitly skip the extra gate
 export LITTLE_CODER_PERMISSION_MODE=accept-all
 ```
 
