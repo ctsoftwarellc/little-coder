@@ -40,7 +40,7 @@ export default function (pi: ExtensionAPI) {
     }),
     async execute(_id, input: { steps?: string[]; current?: number; done?: number[] }) {
       plan = applyPlanUpdate(plan, input);
-      setPlanStatus(plan.current, plan.steps.length); // publish for the narrator header
+      setPlanStatus(plan.current, plan.steps.length, plan.steps, plan.done); // publish for cockpit PLAN + narrator header
       const reminder = formatPlanReminder(plan) || "Plan cleared.";
       return {
         content: [{ type: "text", text: `Plan updated.\n${reminder}` }],

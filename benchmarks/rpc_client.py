@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import threading
 import time
@@ -28,7 +29,21 @@ from typing import Callable, Optional
 
 REPO_ROOT = Path(__file__).parent.parent
 PI_BIN = REPO_ROOT / "node_modules" / ".bin" / "pi"
+PI_CLI_JS = REPO_ROOT / "node_modules" / "@earendil-works" / "pi-coding-agent" / "dist" / "cli.js"
 TB_SHELL_PREFIX = "__LC_TB_SHELL__:"
+
+
+def _pi_command_prefix() -> list[str]:
+    if os.name == "nt":
+        node = shutil.which("node")
+        if not node:
+            raise FileNotFoundError("node.exe not found on PATH")
+        if not PI_CLI_JS.exists():
+            raise FileNotFoundError(f"pi CLI JS not found at {PI_CLI_JS}. Run `npm install` in {REPO_ROOT}.")
+        return [node, str(PI_CLI_JS)]
+    if not PI_BIN.exists():
+        raise FileNotFoundError(f"pi CLI not found at {PI_BIN}. Run `npm install` in {REPO_ROOT}.")
+    return [str(PI_BIN)]
 
 
 def _extension_paths() -> list[str]:
@@ -79,9 +94,6 @@ class PiRpc:
         max_turns: Optional[int] = None,
         tb_shell_handler: Optional[Callable[[dict], str]] = None,
     ):
-        if not PI_BIN.exists():
-            raise FileNotFoundError(f"pi CLI not found at {PI_BIN}. Run `npm install` in {REPO_ROOT}.")
-
         self._tb_shell_handler = tb_shell_handler
 
         full_env = dict(os.environ)
@@ -101,7 +113,7 @@ class PiRpc:
         if max_turns:
             full_env["LITTLE_CODER_MAX_TURNS"] = str(max_turns)
 
-        cmd = [str(PI_BIN), "--mode", "rpc", "--no-session", "--model", model]
+        cmd = [*_pi_command_prefix(), "--mode", "rpc", "--no-session", "--model", model]
         for ext in _extension_paths():
             cmd.extend(["-e", ext])
         # Pi's --tools flag filters the tool SCHEMAS presented to the model
@@ -128,6 +140,8 @@ class PiRpc:
             cwd=cwd or str(REPO_ROOT),
             env=full_env,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             bufsize=1,  # line-buffered
         )
 

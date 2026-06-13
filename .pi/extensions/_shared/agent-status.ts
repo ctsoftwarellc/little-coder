@@ -13,19 +13,34 @@ export interface AgentStatus {
   phase?: "explore" | "edit" | "verify";
   planCurrent?: number;
   planTotal?: number;
+  planSteps?: string[];
+  planDone?: number[];
   cachedPercent?: number; // 0..100
   tokensPerSecond?: number;
 }
 
 let status: AgentStatus = {};
 
+// Panel ownership: when the cockpit is loaded it claims the single persistent
+// panel, and the narrator yields its own widget (it keeps driving the
+// working-message spinner only) so the two don't stack into a duplicated HUD.
+let panelClaimed = false;
+export function claimPanel(): void {
+  panelClaimed = true;
+}
+export function isPanelClaimed(): boolean {
+  return panelClaimed;
+}
+
 export function setPhaseStatus(phase: AgentStatus["phase"]): void {
   status.phase = phase;
 }
 
-export function setPlanStatus(current: number, total: number): void {
+export function setPlanStatus(current: number, total: number, steps?: string[], done?: number[]): void {
   status.planCurrent = current;
   status.planTotal = total;
+  if (steps) status.planSteps = steps;
+  if (done) status.planDone = done;
 }
 
 export function setTimingStatus(cachedPercent: number, tokensPerSecond: number): void {

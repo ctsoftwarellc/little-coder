@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { describeToolCall, fallbackVerdict, shouldSummarize, tailLines } from "../_shared/narrate.ts";
 import { narratorConfig, summarize } from "../_shared/mini-llm.ts";
-import { clearAgentStatus, formatStatusHeader } from "../_shared/agent-status.ts";
+import { clearAgentStatus, formatStatusHeader, isPanelClaimed } from "../_shared/agent-status.ts";
 
 // ── The narrator (agent-feel UX) ────────────────────────────────────────────
 // Replaces the bare spinner with a running, human-readable account of what the
@@ -51,12 +51,16 @@ export default function (pi: ExtensionAPI) {
   // above "what am I doing right now".
   const render = (ctx: any, lines: string[]) => {
     lastLines = lines;
-    const header = formatStatusHeader();
-    const body = header ? [header, ...lines] : lines;
-    try {
-      ctx.ui.setWidget(WIDGET_KEY, body);
-    } catch {
-      // UI unavailable (RPC/print) — narration is purely cosmetic, ignore.
+    // When the cockpit owns the persistent panel, don't render a second widget
+    // (that's what duplicated "Thinking…"). We still drive the spinner below.
+    if (!isPanelClaimed()) {
+      const header = formatStatusHeader();
+      const body = header ? [header, ...lines] : lines;
+      try {
+        ctx.ui.setWidget(WIDGET_KEY, body);
+      } catch {
+        // UI unavailable (RPC/print) — narration is purely cosmetic, ignore.
+      }
     }
     // Also drive pi's own working-message line so the spinner reads
     // "📖 Reading Foo.php" instead of a bare "Working…", even for users who
