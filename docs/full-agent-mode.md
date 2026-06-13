@@ -50,7 +50,8 @@ A real shell env var overrides `.env` for a single run.
 | 6 | `phase-gating` | State machine (explore→edit→verify) drives the allowed-tools set | opt-in `LITTLE_CODER_PHASE_GATING=1` | Fewer visible tools = fewer wrong-tool calls. Narrows the surface to what the current step needs. **Don't combine with a benchmark allow-list.** |
 | 7 | `plan-anchor` | A `Plan` tool the model declares steps with; harness re-shows `Plan: 5 steps. Done: 1,2. Current: 3 …` each turn | opt-in `LITTLE_CODER_PLAN_ANCHOR=1` | Fights the #1 small-model failure — drifting off-task. Moves "remember the plan" from model to harness. |
 | 8 | `fuzzy-edit` | When an exact Edit would fail on whitespace, finds the *unique* match, snaps to real file text, echoes the diff | **on** (`LITTLE_CODER_FUZZY_EDIT=0` off) | Recovers failed edits that small models botch on indentation/whitespace. Only acts on an unambiguous match. |
-| 9 | `scripts/arcova-mine-trajectories.mjs` | Mines `.arcova/trajectories/*.jsonl` for per-model failure signatures and recommends profile toggles | manual script | Turns the other 8 from hand-tuned into self-tuning ("fails Edit 31% → enable fuzzy edit"). |
+| 9 | `bash-path-guard` | Blocks Bash calls that mix raw Windows `C:\...\php.exe` paths or PowerShell cmdlets like `Select-String` into a Bash shell | **on** | Stops a common Arcova/Windows failure loop before execution and tells the model to use Verify or a Bash-compatible `/c/Users/...` path. |
+| 10 | `scripts/arcova-mine-trajectories.mjs` | Mines `.arcova/trajectories/*.jsonl` for per-model failure signatures and recommends profile toggles | manual script | Turns the other mechanisms from hand-tuned into self-tuning ("fails Edit 31% → enable fuzzy edit"). |
 
 ### How they compound
 - **Speed:** #1 measures; #2 + #3 + #4 cut re-prefill and recovery loops.

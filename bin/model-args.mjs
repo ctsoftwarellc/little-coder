@@ -22,6 +22,7 @@ const LMSTUDIO_ALIASES = new Map([
   ["nvidia/nemotron-3-nano-4b", "nvidia/nemotron-3-nano-4b"],
   ["qwen3.5-9b", "qwen/qwen3.5-9b"],
   ["qwen/qwen3.5-9b", "qwen/qwen3.5-9b"],
+  ["qwen3.5-9b-swe-mtp", "qwen3.5-9b-swe-mtp"],
   ["qwen3.6-35b-a3b", "qwen/qwen3.6-35b-a3b"],
   ["qwen/qwen3.6-35b-a3b", "qwen/qwen3.6-35b-a3b"],
 ]);
