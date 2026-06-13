@@ -89,6 +89,44 @@ export function terminalCols(): number | undefined {
   return process.stdout && typeof process.stdout.columns === "number" ? process.stdout.columns : undefined;
 }
 
+export function terminalRows(): number | undefined {
+  return process.stdout && typeof process.stdout.rows === "number" ? process.stdout.rows : undefined;
+}
+
+// pi's interactive mode hard-caps string-array widgets at 10 lines
+// (InteractiveMode.MAX_WIDGET_LINES) and appends "... (widget truncated)" past
+// that. We render at most BUDGET lines so that never fires — and so the panel
+// stays an instrument strip, not a full screen that buries the chat.
+export const WIDGET_LINE_BUDGET = 9;
+
+/** Truncate a line to a visible width with an ellipsis (mirrors box's fit). */
+export function truncate(s: string, width: number): string {
+  if (width <= 0) return "";
+  if (s.length <= width) return s;
+  return width <= 1 ? s.slice(0, width) : s.slice(0, width - 1) + "…";
+}
+
+/** A horizontal rule sized to the panel width. */
+export function rule(cols?: number): string {
+  return "─".repeat(Math.max(8, panelWidth(cols)));
+}
+
+/**
+ * Join status segments with " · " and drop trailing ones that don't fit the
+ * width — so the strip degrades gracefully on a narrow terminal instead of
+ * wrapping or being hard-cut mid-word.
+ */
+export function joinSegments(segments: string[], cols?: number): string {
+  const width = panelWidth(cols);
+  const kept: string[] = [];
+  for (const seg of segments.filter(Boolean)) {
+    const candidate = [...kept, seg].join(" · ");
+    if (candidate.length > width && kept.length > 0) break;
+    kept.push(seg);
+  }
+  return truncate(kept.join(" · "), width);
+}
+
 /** Total usable width (mirrors box's clamp) for laying out the body columns. */
 export function panelWidth(cols?: number): number {
   return clampWidth(cols);

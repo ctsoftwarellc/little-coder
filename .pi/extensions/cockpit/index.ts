@@ -4,7 +4,17 @@ import { basename, join } from "node:path";
 import { describeToolCall, fallbackVerdict } from "../_shared/narrate.ts";
 import { claimPanel, getAgentStatus } from "../_shared/agent-status.ts";
 import { defaultNext, nextAgentState, stateLabel, type AgentState, type StateSignal } from "../_shared/agent-state.ts";
-import { box, contextHealth, hudRows, panelWidth, terminalCols, twoColumn, useAscii, verifyRows, type VerifyPhases } from "./render.ts";
+import {
+  contextHealth,
+  joinSegments,
+  panelWidth,
+  rule,
+  terminalCols,
+  truncate,
+  WIDGET_LINE_BUDGET,
+  type VerifyPhases,
+} from "./render.ts";
+import { paint } from "./color.ts";
 
 // ── AXIOM cockpit: a persistent agent control surface ───────────────────────
 // Not a log stream with a widget printed in it — a fixed operating panel driven
@@ -103,12 +113,6 @@ function riskSeverity(n: number): string {
   return "low";
 }
 
-function formatWindow(ctx: any): string {
-  const w = Number(ctx?.model?.contextWindow);
-  if (!Number.isFinite(w) || w <= 0) return "";
-  return w >= 1000 ? `${Math.round(w / 1000)}K` : String(w);
-}
-
 function shortPath(path: string): string {
   const parts = path.replace(/\\/g, "/").split("/").filter(Boolean);
   return parts.slice(-3).join("/");
@@ -162,94 +166,106 @@ function promptHeadline(prompt: string): string {
 }
 
 // ── Rendering ───────────────────────────────────────────────────────────────
+//
+// pi caps a string-array widget at 10 lines and truncates the rest. So this is
+// a dense instrument strip — every line earns its place — not a full dashboard.
+// Priority order when budget is tight: identity → live status → mission → guard
+// → plan → activity tail → next/commands. The deep views (full plan, diff,
+// verify phases, risks) live behind the / commands, which notify on demand.
 
-function preflightBlock(): string[] {
-  const lines = [
-    "PREFLIGHT",
-    state.preflight.dirty
-      ? "  [LOCKED] unrelated uncommitted changes detected"
-      : "  [CLEAN]  working tree clean",
-    "  [ALLOW]  only files your task lists may be modified",
-  ];
-  if (state.preflight.safeMode) lines.push("  [SAFE]   no revert, clean, or unrelated fixes");
-  return lines;
+function headerLine(ctx: any): string {
+  const project = basename(state.cwd || process.cwd());
+  const bits = ["AXIOM", project, modelShort(ctx)];
+  if (state.preflight.branch) bits.push(state.preflight.branch);
+  return bits.join(" · ");
 }
 
-function activityBlock(): string[] {
-  const head = ["ACTIVITY"];
-  if (state.activity.length === 0) return [...head, "  --:--:--  [WAIT]  waiting for launch"];
-  const rows = state.activity.map((a) => {
-    const m = a.text.match(/^\[([A-Z]+)\]\s*(.*)$/);
-    const tag = m ? m[1].padEnd(6) : "INFO  ";
-    const body = m ? m[2] : a.text;
-    return `  ${a.t}  [${tag.trim().padEnd(5)}] ${body}`;
-  });
-  // The forward-looking step reads as the latest [NEXT] line.
-  rows.push(`  ${timeNow()}  [NEXT ] ${state.next}`);
-  return [...head, ...rows];
+function statusLine(ctx: any): string {
+  const pct = contextPercent(ctx);
+  const ctxSeg = pct != null ? `ctx ${contextHealth(pct)}` : "ctx —";
+  const verifySeg = state.verify.ran ? (state.verify.passed ? "verify pass" : "verify FAIL") : "verify not run";
+  return joinSegments(
+    [
+      stateLabel(state.agentState),
+      ctxSeg,
+      `${state.filesTouched.size} files`,
+      `risk ${riskSeverity(state.risks.length)}`,
+      verifySeg,
+    ],
+    terminalCols(),
+  );
 }
 
-function missionBlock(): string[] {
-  return ["MISSION", `  ${state.mission || "unassigned — /mission <objective>"}`];
+function guardLine(): string | null {
+  const flags: string[] = [];
+  if (state.preflight.dirty) flags.push("[LOCKED] unrelated changes");
+  if (state.preflight.safeMode) flags.push("[SAFE] protected workspace");
+  return flags.length > 0 ? `GUARD  ${flags.join("  ·  ")}` : null;
 }
 
-function planBlock(): string[] {
+function planLine(): string | null {
   const s = getAgentStatus();
   const steps = s.planSteps ?? [];
-  if (steps.length === 0) return ["PLAN", "  (none yet — model hasn't called Plan)"];
+  if (steps.length === 0) return null;
   const done = new Set(s.planDone ?? []);
-  const cur = s.planCurrent ?? 0;
-  return [
-    "PLAN",
-    ...steps.slice(0, 8).map((step, i) => {
-      const n = i + 1;
-      const mark = done.has(n) ? "✓" : n === cur ? "▶" : " ";
-      return `  ${mark} ${n}. ${step}`;
-    }),
-  ];
+  const cur = s.planCurrent ?? (steps.findIndex((_, i) => !done.has(i + 1)) + 1 || steps.length);
+  const current = steps[cur - 1] ?? steps[0];
+  return `PLAN  ▶ ${cur}/${steps.length}  ${current}`;
+}
+
+function activityRows(limit: number): string[] {
+  if (limit <= 0) return [];
+  if (state.activity.length === 0) return [`--:--:--  [WAIT] waiting for launch`];
+  return state.activity.slice(-limit).map((a) => `${a.t}  ${a.text}`);
 }
 
 function renderLines(ctx: any): string[] {
-  const ascii = useAscii();
   const cols = terminalCols();
   const width = panelWidth(cols);
-  const project = basename(state.cwd || process.cwd());
-  const pct = contextPercent(ctx);
-  const window = formatWindow(ctx);
-  const ctxField = pct != null ? `${Math.round(pct)}%${window ? ` (${window})` : ""}` : window || "—";
-  const verifyField = state.verify.ran ? (state.verify.passed ? "pass" : "FAIL") : "not run";
+  const out: string[] = [headerLine(ctx), statusLine(ctx), `MISSION  ${state.mission || "unassigned — /mission <objective>"}`];
 
-  const [r1, r2] = hudRows(
-    "AXIOM",
-    [`Project: ${project}`, `STATE: ${stateLabel(state.agentState)}`, `MODEL: ${modelShort(ctx)}`],
-    [`CONTEXT: ${ctxField}`, `VERIFY: ${verifyField}`, `FILES: ${state.filesTouched.size}  RISK: ${riskSeverity(state.risks.length)}`],
-    cols,
-  );
-  const hud = box("", state.preflight.branch || "", [...r1, ...r2], cols);
+  const guard = guardLine();
+  if (guard) out.push(guard);
+  const plan = planLine();
+  if (plan) out.push(plan);
 
-  const left = [...preflightBlock(), "", ...activityBlock()];
-  const right = [...missionBlock(), "", ...planBlock()];
-  const body = twoColumn(left, right, width);
+  // Whatever budget remains goes to the activity tail, with the last line
+  // reserved for "next + commands". A rule separates status from the log when
+  // there's room for one.
+  const footer = `→ ${state.next}   ·   /plan /diff /verify /risk /context`;
+  let headRoom = WIDGET_LINE_BUDGET - out.length - 1; // minus the footer
+  if (headRoom >= 2) {
+    out.push(rule(cols));
+    headRoom -= 1;
+  }
+  out.push(...activityRows(headRoom));
+  out.push(footer);
 
-  const changed = Array.from(state.filesTouched).sort().map(shortPath);
-
-  return [
-    ...hud,
-    "",
-    ...body,
-    "",
-    "VERIFY",
-    ...verifyRows(state.verify, ascii),
-    ...(changed.length > 0 ? ["", "CHANGED", ...changed.slice(0, 5).map((c) => `  ${c}`)] : []),
-    "",
-    "COMMAND",
-    "  /plan  /diff  /verify  /risk  /context  /preflight  /export-session",
-  ];
+  return out.slice(0, WIDGET_LINE_BUDGET).map((l) => truncate(l, width));
 }
 
+let renderErrorShown = false;
+
 function render(ctx: any): void {
+  // Compute lines OUTSIDE the setWidget try so a layout bug surfaces as a
+  // visible notify instead of a silently-swallowed "no UI". setWidget itself
+  // may legitimately be unavailable (print/RPC) — that part stays quiet.
+  let lines: string[];
   try {
-    ctx.ui.setWidget(WIDGET_KEY, renderLines(ctx));
+    lines = renderLines(ctx);
+  } catch (err) {
+    lines = [`AXIOM cockpit render error: ${err instanceof Error ? err.message : String(err)}`];
+    if (!renderErrorShown) {
+      renderErrorShown = true;
+      try {
+        ctx.ui.notify(`cockpit render error: ${err instanceof Error ? err.message : String(err)}`, "error");
+      } catch {
+        // ignore
+      }
+    }
+  }
+  try {
+    ctx.ui.setWidget(WIDGET_KEY, paint(lines));
   } catch {
     // UI unavailable (print/RPC).
   }

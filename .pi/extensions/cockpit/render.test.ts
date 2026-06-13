@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { box, cell, contextHealth, useAscii, verifyRows } from "./render.ts";
+import { box, cell, contextHealth, joinSegments, rule, truncate, useAscii, verifyRows, WIDGET_LINE_BUDGET } from "./render.ts";
 
 describe("cockpit render", () => {
   it("draws a titled box with aligned borders", () => {
@@ -38,5 +38,33 @@ describe("cockpit render", () => {
   it("ascii mode is opt-in", () => {
     expect(useAscii({} as NodeJS.ProcessEnv)).toBe(false);
     expect(useAscii({ LITTLE_CODER_COCKPIT_ASCII: "1" } as any)).toBe(true);
+  });
+
+  it("stays under pi's 10-line widget cap with headroom", () => {
+    expect(WIDGET_LINE_BUDGET).toBeLessThan(10);
+  });
+
+  it("truncates to a visible width with an ellipsis", () => {
+    expect(truncate("hello", 10)).toBe("hello");
+    expect(truncate("hello world", 5)).toBe("hell…");
+    expect(truncate("x", 0)).toBe("");
+  });
+
+  it("joins status segments and drops the ones that don't fit", () => {
+    const wide = joinSegments(["READING", "ctx 18% OK", "3 files"], 80);
+    expect(wide).toBe("READING · ctx 18% OK · 3 files");
+    // When the segments overflow the panel (min width 48), keep the leading ones
+    // and drop the tail instead of wrapping or hard-cutting mid-word.
+    const segs = ["AAAAAAAAAA", "BBBBBBBBBB", "CCCCCCCCCC", "DDDDDDDDDD", "EEEEEEEEEE"];
+    const full = segs.join(" · ").length; // 62
+    const narrow = joinSegments(segs, 48);
+    expect(narrow.length).toBeLessThanOrEqual(48);
+    expect(narrow.length).toBeLessThan(full); // tail was dropped
+    expect(narrow.startsWith("AAAAAAAAAA")).toBe(true);
+  });
+
+  it("draws a rule sized to the panel width", () => {
+    expect(rule(50)).toMatch(/^─+$/);
+    expect(rule(50).length).toBeGreaterThan(8);
   });
 });

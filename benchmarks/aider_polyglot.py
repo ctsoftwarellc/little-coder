@@ -74,7 +74,7 @@ def _prepare_python(src: Path, work: Path):
 def _run_python(work: Path, timeout: int):
     try:
         r = subprocess.run(
-            ["python3", "-m", "pytest", "-x", "-q"],
+            [sys.executable, "-m", "pytest", "-x", "-q"],
             cwd=work, capture_output=True, text=True, timeout=timeout,
         )
         return r.returncode == 0, (r.stdout + r.stderr)
@@ -152,7 +152,7 @@ def _run_exercise(
     log_dir = LOG_ROOT / lang / ex_name
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         work = Path(tmp) / ex_name
         stubs, tests = desc["prepare"](src, work)
         prompt = _build_prompt(ex_name, stubs, tests, desc["syntax_hint"])

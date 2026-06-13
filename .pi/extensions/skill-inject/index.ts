@@ -36,7 +36,7 @@ const INTENT_MAP: Record<string, string[]> = {
   fix: ["Edit"], update: ["Edit"], replace: ["Edit"],
   add: ["Edit", "Write"], refactor: ["Edit", "Read"],
   run: ["Bash"], execute: ["Bash"], install: ["Bash"],
-  build: ["Bash"], test: ["Bash"],
+  build: ["Bash"], test: ["Verify", "Bash"],
   pest: ["Verify", "Bash"], pint: ["Verify"], verify: ["Verify"],
   laravel: ["Read", "Grep"], tenancy: ["Read", "Grep"], billing: ["Read", "Grep"],
   routes: ["ArcovaListRoutes"], route: ["ArcovaListRoutes"],
