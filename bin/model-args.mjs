@@ -22,9 +22,18 @@ const LMSTUDIO_ALIASES = new Map([
   ["nvidia/nemotron-3-nano-4b", "nvidia/nemotron-3-nano-4b"],
   ["qwen3.5-9b", "qwen/qwen3.5-9b"],
   ["qwen/qwen3.5-9b", "qwen/qwen3.5-9b"],
-  ["qwen3.5-9b-swe-mtp", "qwen3.5-9b-swe-mtp"],
+  ["qwopus3.6-35b-a3b-v1-mtp", "qwopus3.6-35b-a3b-v1-mtp"],
+  ["qwen3.5-9b-mtp-swe-agent", "qwopus3.6-35b-a3b-v1-mtp"],
+  ["qwen3.5-9b-swe-mtp", "qwopus3.6-35b-a3b-v1-mtp"],
   ["qwen3.6-35b-a3b", "qwen/qwen3.6-35b-a3b"],
   ["qwen/qwen3.6-35b-a3b", "qwen/qwen3.6-35b-a3b"],
+]);
+
+const MODEL_ALIASES = new Map([
+  ["llamacpp/qwen3.5-9b-mtp-swe-agent", "llamacpp/qwopus3.6-35b-a3b-v1-mtp"],
+  ["llamacpp/qwen3.5-9b-swe-mtp", "llamacpp/qwopus3.6-35b-a3b-v1-mtp"],
+  ["lmstudio/qwen3.5-9b-mtp-swe-agent", "lmstudio/qwopus3.6-35b-a3b-v1-mtp"],
+  ["lmstudio/qwen3.5-9b-swe-mtp", "lmstudio/qwopus3.6-35b-a3b-v1-mtp"],
 ]);
 
 function hasExplicitModel(args) {
@@ -35,11 +44,14 @@ function normalizeExplicitModelArgs(args) {
   const next = [...args];
   for (let i = 0; i < next.length; i++) {
     const arg = next[i];
-    if (arg === "--model" && typeof next[i + 1] === "string" && LMSTUDIO_ALIASES.has(next[i + 1])) {
+    if (arg === "--model" && typeof next[i + 1] === "string" && MODEL_ALIASES.has(next[i + 1])) {
+      next[i + 1] = MODEL_ALIASES.get(next[i + 1]);
+    } else if (arg === "--model" && typeof next[i + 1] === "string" && LMSTUDIO_ALIASES.has(next[i + 1])) {
       next[i + 1] = qualifyModel(next[i + 1]);
     } else if (arg.startsWith("--model=")) {
       const value = arg.slice("--model=".length);
-      if (LMSTUDIO_ALIASES.has(value)) next[i] = `--model=${qualifyModel(value)}`;
+      if (MODEL_ALIASES.has(value)) next[i] = `--model=${MODEL_ALIASES.get(value)}`;
+      else if (LMSTUDIO_ALIASES.has(value)) next[i] = `--model=${qualifyModel(value)}`;
     }
   }
   return next;
@@ -47,10 +59,11 @@ function normalizeExplicitModelArgs(args) {
 
 function looksLikeModelId(value) {
   if (!value || value.startsWith("-") || /\s/.test(value)) return false;
-  return LMSTUDIO_ALIASES.has(value) || value.includes("/") || value.endsWith(".gguf") || /^[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+$/.test(value);
+  return MODEL_ALIASES.has(value) || LMSTUDIO_ALIASES.has(value) || value.includes("/") || value.endsWith(".gguf") || /^[A-Za-z0-9_.-]+:[A-Za-z0-9_.-]+$/.test(value);
 }
 
 function qualifyModel(value) {
+  if (MODEL_ALIASES.has(value)) return MODEL_ALIASES.get(value);
   if (LMSTUDIO_ALIASES.has(value)) return `lmstudio/${LMSTUDIO_ALIASES.get(value)}`;
   return value.includes("/") && KNOWN_PROVIDERS.has(value.split("/")[0])
     ? value

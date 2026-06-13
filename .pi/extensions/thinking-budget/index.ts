@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { harnessIntervention } from "../_shared/intervention.ts";
+import { harnessIntervention, markHarnessAbort } from "../_shared/intervention.ts";
 
 // pi's thinking-level union (not re-exported from the package root). Mirrors
 // settings-manager's ThinkingLevel; structurally assignable to pi's own type.
@@ -178,6 +178,7 @@ export default function (pi: ExtensionAPI) {
       ctx,
       "the model has thought long enough — forcing it to start implementing.",
     );
+    markHarnessAbort("thinking budget exceeded");
     ctx.abort();
   });
 }

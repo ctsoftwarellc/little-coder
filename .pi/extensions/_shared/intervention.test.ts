@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { harnessIntervention } from "./intervention.ts";
+import { consumeHarnessAbort, harnessIntervention, markHarnessAbort } from "./intervention.ts";
 
 describe("harnessIntervention", () => {
   it("prefixes the message and uses a single info-level notification", () => {
@@ -9,5 +9,11 @@ describe("harnessIntervention", () => {
     expect(calls).toEqual([
       ["harness intervention: the model did X — doing Y.", "info"],
     ]);
+  });
+
+  it("stores a one-shot harness abort reason", () => {
+    markHarnessAbort("thinking budget exceeded");
+    expect(consumeHarnessAbort()).toBe("thinking budget exceeded");
+    expect(consumeHarnessAbort()).toBeUndefined();
   });
 });

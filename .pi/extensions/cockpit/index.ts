@@ -4,6 +4,7 @@ import { basename, join } from "node:path";
 import { describeToolCall, fallbackVerdict } from "../_shared/narrate.ts";
 import { claimPanel, getAgentStatus } from "../_shared/agent-status.ts";
 import { defaultNext, nextAgentState, stateLabel, type AgentState, type StateSignal } from "../_shared/agent-state.ts";
+import { consumeHarnessAbort } from "../_shared/intervention.ts";
 import {
   contextHealth,
   joinSegments,
@@ -419,6 +420,15 @@ export default function (pi: ExtensionAPI) {
   pi.on("turn_end", async (_event, ctx) => render(ctx));
 
   pi.on("agent_end", async (_event, ctx) => {
+    const harnessAbort = consumeHarnessAbort();
+    if (harnessAbort) {
+      advance("blocked");
+      pushUnique(state.risks, `harness abort: ${harnessAbort}`);
+      pushActivity(`[HALT] harness abort — ${harnessAbort}`);
+      state.next = "waiting for recovery follow-up";
+      render(ctx);
+      return;
+    }
     advance("done");
     render(ctx);
   });

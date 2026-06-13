@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import cockpit from "./index.ts";
+import { markHarnessAbort } from "../_shared/intervention.ts";
 
 // Guards the real failure mode the user hit: if renderLines throws, render()'s
 // try/catch swallows it and the widget silently never appears. This drives the
@@ -54,5 +55,19 @@ describe("cockpit smoke (renders without throwing)", () => {
     expect(text).toContain("→"); // next + commands footer
     // Every line must be a string (setWidget contract).
     expect(last.every((l) => typeof l === "string")).toBe(true);
+  });
+
+  it("does not mark a harness-aborted turn as done", async () => {
+    const { handlers, widgetCalls, ctx } = harness();
+
+    await handlers.session_start?.({}, ctx);
+    await handlers.before_agent_start?.({ prompt: "Read and follow test.md exactly." }, ctx);
+    markHarnessAbort("thinking budget exceeded");
+    await handlers.agent_end?.({}, ctx);
+
+    const text = (widgetCalls[widgetCalls.length - 1] as string[]).join("\n");
+    expect(text).toContain("BLOCKED");
+    expect(text).toContain("harness abort");
+    expect(text).not.toContain("mission complete");
   });
 });

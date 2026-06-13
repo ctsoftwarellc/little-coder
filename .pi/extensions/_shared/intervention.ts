@@ -26,6 +26,18 @@ export interface InterventionCtx {
   ui: InterventionUI;
 }
 
+let harnessAbortReason: string | undefined;
+
+export function markHarnessAbort(reason: string): void {
+  harnessAbortReason = reason;
+}
+
+export function consumeHarnessAbort(): string | undefined {
+  const reason = harnessAbortReason;
+  harnessAbortReason = undefined;
+  return reason;
+}
+
 /**
  * Surface a single, uniformly-formatted harness-intervention line to the user.
  *

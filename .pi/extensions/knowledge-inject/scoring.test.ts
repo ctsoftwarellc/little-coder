@@ -54,9 +54,9 @@ describe("knowledge directory loads from repo", () => {
   const kDir = join(here, "..", "..", "..", "skills", "knowledge");
   const pDir = join(here, "..", "..", "..", "skills", "protocols");
 
-  it("knowledge dir has 18 files", () => {
+  it("knowledge dir has 19 files", () => {
     expect(existsSync(kDir)).toBe(true);
-    expect(readdirSync(kDir).filter((f) => f.endsWith(".md")).length).toBe(18);
+    expect(readdirSync(kDir).filter((f) => f.endsWith(".md")).length).toBe(19);
   });
 
   it("protocols dir has 4 files", () => {
@@ -77,6 +77,13 @@ describe("knowledge directory loads from repo", () => {
   it("workspace_docs declares requires_tools", () => {
     const parsed = parseSkillFile(readFileSync(join(kDir, "workspace_docs.md"), "utf-8"));
     expect(parsed!.frontmatter.requires_tools).toEqual(["Read", "Glob"]);
+  });
+
+  it("arcova windows php tests card requires bash and verify", () => {
+    const parsed = parseSkillFile(readFileSync(join(kDir, "arcova_windows_php_tests.md"), "utf-8"));
+    expect(parsed!.frontmatter.topic).toBe("arcova_windows_php_tests");
+    expect(parsed!.frontmatter.keywords).toContain("artisan test");
+    expect(parsed!.frontmatter.requires_tools).toEqual(["Bash", "Verify"]);
   });
 
   it("arcova task loop protocol is keyword-triggered and requires verify", () => {

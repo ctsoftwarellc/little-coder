@@ -118,39 +118,6 @@
   {%- endif %}
 {%- endmacro %}
 
-{#- ── extract_think: pull <think>…</think> out of plain content ───────── #}
-{#-    writes .reasoning and .body into the passed namespace.            ── #}
-{#-    NOTE: avoids the Jinja for-loop scoping pitfall (a variable set    #}
-{#-    inside {% for %} does not survive the loop), which silently broke  #}
-{#-    the equivalent macro in the original base template.               ── #}
-{%- macro extract_think(content, result_ns) %}
-  {%- if '</think>' in content %}
-    {%- set _parts = content.split('</think>') %}
-    {%- set _head  = _parts[0] %}
-    {%- set result_ns.body = (_parts[1:] | join('</think>')) | trim %}
-    {%- if '<think>' in _head %}
-      {%- set result_ns.reasoning = (_head.split('<think>')[1:] | join('<think>')) | trim %}
-    {%- else %}
-      {%- set result_ns.reasoning = _head | trim %}
-    {%- endif %}
-  {%- elif '<think>' in content %}
-    {#- unclosed think block: keep any pre-text as body, rest as reasoning #}
-    {%- set _prefix = content.split('<think>')[0] %}
-    {%- set _rest   = content.split('<think>')[1:] | join('<think>') %}
-    {%- if '<tool_call>' in _rest %}
-      {%- set result_ns.reasoning = _rest.split('<tool_call>')[0] | trim %}
-      {%- set result_ns.body      = (_prefix ~ '\n<tool_call>' ~
-                                     _rest.split('<tool_call>')[1:] | join('<tool_call>')) | trim %}
-    {%- else %}
-      {%- set result_ns.reasoning = _rest | trim %}
-      {%- set result_ns.body      = _prefix | trim %}
-    {%- endif %}
-  {%- else %}
-    {%- set result_ns.reasoning = '' %}
-    {%- set result_ns.body      = content | trim %}
-  {%- endif %}
-{%- endmacro %}
-
 {#- ── is_tool_error: explicit error detection for loop hard-stop ──────── #}
 {%- macro is_tool_error(content) %}
   {%- set cl = content | lower %}
@@ -268,15 +235,31 @@ Rules:
     {%- set ns.last_tool_failed = false %}
 
     {#- reasoning: prefer structured reasoning_content, else inline <think> #}
-    {%- set think_result = namespace(reasoning='', body='') %}
+    {%- set reasoning = '' %}
+    {%- set body = content %}
     {%- if message.reasoning_content is defined and message.reasoning_content is string %}
-      {%- set think_result.reasoning = message.reasoning_content | trim %}
-      {%- set think_result.body      = content %}
-    {%- else %}
-      {%- set _ = extract_think(content, think_result) %}
+      {%- set reasoning = message.reasoning_content | trim %}
+    {%- elif '</think>' in content %}
+      {%- set _parts = content.split('</think>') %}
+      {%- set _head = _parts[0] %}
+      {%- set body = (_parts[1:] | join('</think>')) | trim %}
+      {%- if '<think>' in _head %}
+        {%- set reasoning = (_head.split('<think>')[1:] | join('<think>')) | trim %}
+      {%- else %}
+        {%- set reasoning = _head | trim %}
+      {%- endif %}
+    {%- elif '<think>' in content %}
+      {%- set _prefix = content.split('<think>')[0] %}
+      {%- set _rest = content.split('<think>')[1:] | join('<think>') %}
+      {%- if '<tool_call>' in _rest %}
+        {%- set reasoning = _rest.split('<tool_call>')[0] | trim %}
+        {%- set body = (_prefix ~ '\n<tool_call>' ~ (_rest.split('<tool_call>')[1:] | join('<tool_call>'))) | trim %}
+      {%- else %}
+        {%- set reasoning = _rest | trim %}
+        {%- set body = _prefix | trim %}
+      {%- endif %}
     {%- endif %}
 
-    {%- set body = think_result.body %}
     {%- if message.tool_calls and message.tool_calls is iterable
            and message.tool_calls is not mapping
            and '<tool_call>' in body %}
@@ -284,15 +267,15 @@ Rules:
     {%- endif %}
 
     {%- set show_think = (
-          think_result.reasoning and ns.enable_thinking and
+          reasoning and ns.enable_thinking and
           (preserve_thinking is not defined or preserve_thinking != false)
     ) %}
 
     {%- if show_think %}
       {%- if body %}
-        {{- '<|im_start|>assistant\n<think>\n' ~ think_result.reasoning ~ '\n</think>\n' ~ body }}
+        {{- '<|im_start|>assistant\n<think>\n' ~ reasoning ~ '\n</think>\n' ~ body }}
       {%- else %}
-        {{- '<|im_start|>assistant\n<think>\n' ~ think_result.reasoning ~ '\n</think>' }}
+        {{- '<|im_start|>assistant\n<think>\n' ~ reasoning ~ '\n</think>' }}
       {%- endif %}
     {%- else %}
       {%- if body %}

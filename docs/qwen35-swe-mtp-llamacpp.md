@@ -29,6 +29,11 @@ $env:LLAMACPP_BASE_URL = "http://127.0.0.1:8888/v1"
 python benchmarks\aider_polyglot.py --model llamacpp/qwen3.5-9b-swe-mtp --language python --exercises 1 --verbose
 ```
 
+If you still see `Missing positional argument: result_ns`, the request is still
+going to LM Studio's server on port 1234. Check that `LLAMACPP_BASE_URL` points
+at `http://127.0.0.1:8888/v1` and that the command uses
+`llamacpp/qwen3.5-9b-swe-mtp`, not `lmstudio/qwen3.5-9b-swe-mtp`.
+
 If the CUDA backend fails, use the Vulkan backend at:
 
 ```text
