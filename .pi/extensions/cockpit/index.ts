@@ -2,7 +2,7 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { describeToolCall, fallbackVerdict } from "../_shared/narrate.ts";
-import { claimPanel, getAgentStatus } from "../_shared/agent-status.ts";
+import { claimPanel, getAgentStatus, getAmbientNote } from "../_shared/agent-status.ts";
 import { defaultNext, nextAgentState, stateLabel, type AgentState, type StateSignal } from "../_shared/agent-state.ts";
 import { consumeHarnessAbort } from "../_shared/intervention.ts";
 import {
@@ -16,6 +16,7 @@ import {
   type VerifyPhases,
 } from "./render.ts";
 import { paint } from "./color.ts";
+import { CockpitPanel, type PanelView } from "./panel.ts";
 
 // ── AXIOM cockpit: a persistent agent control surface ───────────────────────
 // Not a log stream with a widget printed in it — a fixed operating panel driven
@@ -197,11 +198,16 @@ function statusLine(ctx: any): string {
   );
 }
 
-function guardLine(): string | null {
+function guardText(): string | null {
   const flags: string[] = [];
   if (state.preflight.dirty) flags.push("[LOCKED] unrelated changes");
   if (state.preflight.safeMode) flags.push("[SAFE] protected workspace");
-  return flags.length > 0 ? `GUARD  ${flags.join("  ·  ")}` : null;
+  return flags.length > 0 ? flags.join("  ·  ") : null;
+}
+
+function guardLine(): string | null {
+  const t = guardText();
+  return t ? `GUARD  ${t}` : null;
 }
 
 function planLine(): string | null {
@@ -245,28 +251,86 @@ function renderLines(ctx: any): string[] {
   return out.slice(0, WIDGET_LINE_BUDGET).map((l) => truncate(l, width));
 }
 
+// Assemble the structured panel view from the live cockpit state. Kept separate
+// from layout (panel.ts) so the Component can re-lay-out at the real viewport
+// width while this just snapshots "what is true right now".
+function buildView(ctx: any): PanelView {
+  const pct = contextPercent(ctx);
+  const ctxSeg = pct != null ? `ctx ${contextHealth(pct)}` : "ctx —";
+  const verifySeg = state.verify.ran ? (state.verify.passed ? "verify pass" : "verify FAIL") : "verify not run";
+
+  const s = getAgentStatus();
+  const steps = s.planSteps ?? [];
+  const done = s.planDone ?? [];
+  const plan =
+    steps.length > 0
+      ? {
+          current: s.planCurrent ?? (steps.findIndex((_, i) => !done.includes(i + 1)) + 1 || steps.length),
+          total: steps.length,
+          steps,
+          done,
+        }
+      : undefined;
+
+  const ambient = getAmbientNote();
+  const banner =
+    state.agentState === "BLOCKED" && state.risks[0]
+      ? { tone: "bad" as const, text: state.risks[0] }
+      : state.agentState === "WAITING_APPROVAL"
+        ? { tone: "warn" as const, text: "awaiting your approval" }
+        : ambient
+          ? { tone: "info" as const, text: ambient }
+          : undefined;
+
+  return {
+    header: headerLine(ctx),
+    stateLabel: stateLabel(state.agentState),
+    statusSegments: [ctxSeg, `${state.filesTouched.size} files`, `risk ${riskSeverity(state.risks.length)}`, verifySeg],
+    mission: state.mission || "unassigned — /mission <objective>",
+    guard: guardText() ?? undefined,
+    banner,
+    plan,
+    activity: state.activity.slice(),
+    next: state.next,
+    commands: "/plan /diff /verify /risk /context",
+  };
+}
+
 let renderErrorShown = false;
 
 function render(ctx: any): void {
-  // Compute lines OUTSIDE the setWidget try so a layout bug surfaces as a
-  // visible notify instead of a silently-swallowed "no UI". setWidget itself
-  // may legitimately be unavailable (print/RPC) — that part stays quiet.
-  let lines: string[];
+  // Build the view/lines OUTSIDE the setWidget try so a layout bug surfaces as a
+  // visible notify instead of a silently-swallowed "no UI". setWidget itself may
+  // legitimately be unavailable (print/RPC) — that part stays quiet.
+  //
+  // Interactive (hasUI): hand pi a real Component — uncapped, theme-aware, laid
+  // out at the true viewport width. Print/RPC: fall back to the flat painted
+  // strip (pi caps that path at 10 lines, which is fine there).
+  let view: PanelView | null = null;
+  let fallbackLines: string[] | null = null;
   try {
-    lines = renderLines(ctx);
+    if (ctx.hasUI) view = buildView(ctx);
+    else fallbackLines = renderLines(ctx);
   } catch (err) {
-    lines = [`AXIOM cockpit render error: ${err instanceof Error ? err.message : String(err)}`];
+    const msg = err instanceof Error ? err.message : String(err);
+    fallbackLines = [`AXIOM cockpit render error: ${msg}`];
+    view = null;
     if (!renderErrorShown) {
       renderErrorShown = true;
       try {
-        ctx.ui.notify(`cockpit render error: ${err instanceof Error ? err.message : String(err)}`, "error");
+        ctx.ui.notify(`cockpit render error: ${msg}`, "error");
       } catch {
         // ignore
       }
     }
   }
   try {
-    ctx.ui.setWidget(WIDGET_KEY, paint(lines));
+    if (view) {
+      const snapshot = view;
+      ctx.ui.setWidget(WIDGET_KEY, (_tui: any, theme: any) => new CockpitPanel(snapshot, theme));
+    } else if (fallbackLines) {
+      ctx.ui.setWidget(WIDGET_KEY, paint(fallbackLines));
+    }
   } catch {
     // UI unavailable (print/RPC).
   }

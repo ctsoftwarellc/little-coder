@@ -54,6 +54,19 @@ export function getAgentStatus(): AgentStatus {
 
 export function clearAgentStatus(): void {
   status = {};
+  ambientNote = null;
+}
+
+// Ambient note: a short proactive remark from the presence extension (AXIOM's
+// watcher) that the cockpit surfaces in its banner slot — e.g. "3 files changed
+// and no verify yet". Owned here so presence and cockpit stay decoupled: one
+// writes, the other reads. null = no standing remark.
+let ambientNote: string | null = null;
+export function setAmbientNote(note: string | null): void {
+  ambientNote = note && note.trim() ? note.trim() : null;
+}
+export function getAmbientNote(): string | null {
+  return ambientNote;
 }
 
 const PHASE_EMOJI: Record<NonNullable<AgentStatus["phase"]>, string> = {

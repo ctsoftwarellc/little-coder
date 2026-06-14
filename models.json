@@ -92,11 +92,38 @@
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
         {
+          "id": "google/gemma-4-26b-a4b",
+          "name": "Gemma 4 26B A4B (LM Studio)",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 128000,
+          "maxTokens": 8192,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
+          "id": "google/gemma-4-26b-a4b-qat",
+          "name": "Gemma 4 26B A4B QAT (LM Studio)",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 256000,
+          "maxTokens": 8192,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
           "id": "qwopus3.6-27b-coder-mtp",
           "name": "Qwopus 3.6 27B Coder MTP (LM Studio)",
           "reasoning": true,
           "input": ["text"],
-          "contextWindow": 128000,
+          "contextWindow": 200000,
+          "maxTokens": 8192,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
+        },
+        {
+          "id": "qwen3.6-27b-mtp",
+          "name": "Qwen 3.6 27B MTP (LM Studio)",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 200000,
           "maxTokens": 8192,
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
@@ -141,7 +168,7 @@
           "name": "Qwopus 3.6 35B A3B V1 MTP (LM Studio)",
           "reasoning": true,
           "input": ["text"],
-          "contextWindow": 128000,
+          "contextWindow": 200000,
           "maxTokens": 8192,
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         },
@@ -150,7 +177,7 @@
           "name": "Qwen 3.6 35B A3B (LM Studio)",
           "reasoning": true,
           "input": ["text"],
-          "contextWindow": 128000,
+          "contextWindow": 200000,
           "maxTokens": 8192,
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         }

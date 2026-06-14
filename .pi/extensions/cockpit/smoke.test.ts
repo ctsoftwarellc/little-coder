@@ -7,6 +7,17 @@ import { markHarnessAbort } from "../_shared/intervention.ts";
 // actual event handlers with a fake pi/ctx and asserts setWidget receives
 // non-empty content without throwing.
 
+// Identity theme: fg/bold pass text through unchanged so assertions see the
+// plain visible content (the real Theme only wraps it in zero-width ANSI).
+const stubTheme = { fg: (_c: string, t: string) => t, bold: (t: string) => t };
+
+// Materialize whatever setWidget received into rendered lines. Interactive mode
+// (hasUI) gets a Component factory; print/RPC gets a plain string[].
+function widgetLines(call: any): string[] {
+  if (typeof call === "function") return call({}, stubTheme).render(120);
+  return call;
+}
+
 function harness() {
   const handlers: Record<string, any> = {};
   const widgetCalls: any[] = [];
@@ -17,10 +28,11 @@ function harness() {
   };
   const ctx: any = {
     cwd: "/repo/arcova_ai",
+    hasUI: true,
     model: { provider: "lmstudio", id: "qwen/qwen3.6-35b-a3b", contextWindow: 128000 },
     getContextUsage: () => ({ percent: 6, tokens: 7680, contextWindow: 128000 }),
     ui: {
-      setWidget: (_k: string, lines: any) => widgetCalls.push(lines),
+      setWidget: (_k: string, content: any) => widgetCalls.push(content),
       setStatus: () => {},
       notify: () => {},
     },
@@ -42,18 +54,17 @@ describe("cockpit smoke (renders without throwing)", () => {
     await handlers.turn_end?.({}, ctx);
 
     expect(widgetCalls.length).toBeGreaterThan(0);
-    const last = widgetCalls[widgetCalls.length - 1] as string[];
+    // Interactive mode now hands pi a Component factory, not a string[].
+    expect(typeof widgetCalls[widgetCalls.length - 1]).toBe("function");
+    const last = widgetLines(widgetCalls[widgetCalls.length - 1]);
     expect(Array.isArray(last)).toBe(true);
     expect(last.length).toBeGreaterThan(3);
-    // The whole point of the redesign: NEVER exceed pi's 10-line widget cap, so
-    // "(widget truncated)" can never fire. 9 leaves one line of headroom.
-    expect(last.length).toBeLessThanOrEqual(9);
-    // Structural markers from the compact instrument strip.
+    // Structural markers from the panel.
     const text = last.join("\n");
     expect(text).toContain("AXIOM");
     expect(text).toContain("MISSION");
     expect(text).toContain("→"); // next + commands footer
-    // Every line must be a string (setWidget contract).
+    // Every line must be a string (Component.render contract).
     expect(last.every((l) => typeof l === "string")).toBe(true);
   });
 
@@ -65,7 +76,7 @@ describe("cockpit smoke (renders without throwing)", () => {
     markHarnessAbort("thinking budget exceeded");
     await handlers.agent_end?.({}, ctx);
 
-    const text = (widgetCalls[widgetCalls.length - 1] as string[]).join("\n");
+    const text = widgetLines(widgetCalls[widgetCalls.length - 1]).join("\n");
     expect(text).toContain("BLOCKED");
     expect(text).toContain("harness abort");
     expect(text).not.toContain("mission complete");

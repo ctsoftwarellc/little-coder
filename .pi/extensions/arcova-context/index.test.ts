@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { buildArcovaContextBlock, isLaravelRepo } from "./index.ts";
+import { buildArcovaContextBlock, isLaravelRepo, presentContextFiles } from "./index.ts";
 
 function tempRepo(): string {
   return mkdtempSync(join(tmpdir(), "arcova-context-"));
@@ -55,5 +55,29 @@ describe("arcova-context", () => {
     const block = buildArcovaContextBlock(cwd);
 
     expect(block.indexOf("### .arcova/MAP.md")).toBeLessThan(block.indexOf("### .arcova/RULES.md"));
+  });
+
+  it("injects /init's PROJECT.md in a non-Laravel repo (no Laravel gate)", () => {
+    const cwd = tempRepo();
+    expect(isLaravelRepo(cwd)).toBe(false);
+    mkdirSync(join(cwd, ".arcova"));
+    writeFileSync(join(cwd, ".arcova", "PROJECT.md"), "# Project Context\nDo the thing.");
+
+    const block = buildArcovaContextBlock(cwd);
+    expect(block).toContain("### .arcova/PROJECT.md");
+    expect(block).toContain("Do the thing.");
+    expect(presentContextFiles(cwd)).toEqual(["PROJECT.md"]);
+  });
+
+  it("orders the human PROJECT.md before the generated MAP/RULES", () => {
+    const cwd = tempRepo();
+    mkdirSync(join(cwd, ".arcova"));
+    writeFileSync(join(cwd, ".arcova", "PROJECT.md"), "PROJECT");
+    writeFileSync(join(cwd, ".arcova", "MAP.md"), "MAP");
+    writeFileSync(join(cwd, ".arcova", "RULES.md"), "RULES");
+
+    const block = buildArcovaContextBlock(cwd);
+    expect(block.indexOf("### .arcova/PROJECT.md")).toBeLessThan(block.indexOf("### .arcova/MAP.md"));
+    expect(presentContextFiles(cwd)).toEqual(["PROJECT.md", "MAP.md", "RULES.md"]);
   });
 });

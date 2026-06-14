@@ -16,9 +16,9 @@ const settingsPath = join(here, "..", "..", "settings.json");
 describe("benchmark-profiles resolution against real settings.json", () => {
   const settings = JSON.parse(readFileSync(settingsPath, "utf-8")).little_coder;
 
-  it("resolves base profile for llamacpp/qwen3.6-35b-a3b (budget bumped to 4096)", () => {
+  it("resolves base profile for llamacpp/qwen3.6-35b-a3b (budget bumped to 12000)", () => {
     const p = resolveProfileFrom(settings, "llamacpp/qwen3.6-35b-a3b");
-    expect(p.thinking_budget).toBe(4096);
+    expect(p.thinking_budget).toBe(12000);
     // base profiles no longer hardcode context_limit — it derives from the
     // model's live registered window at runtime (see resolveContextLimit).
     expect(p.context_limit).toBeUndefined();
@@ -41,21 +41,21 @@ describe("benchmark-profiles resolution against real settings.json", () => {
     expect(p.context_limit).toBe(65536);
   });
 
-  it("unknown model falls back to default_model_profile (also 4096)", () => {
+  it("unknown model falls back to default_model_profile (also 12000)", () => {
     const p = resolveProfileFrom(settings, "fake-provider/fake-model");
-    expect(p.thinking_budget).toBe(4096);
+    expect(p.thinking_budget).toBe(12000);
     expect(p.context_limit).toBeUndefined();
   });
 
   it("unknown benchmark name yields base profile unchanged", () => {
     const p = resolveProfileFrom(settings, "llamacpp/qwen3.6-35b-a3b", "totally_made_up");
-    expect(p.thinking_budget).toBe(4096);
+    expect(p.thinking_budget).toBe(12000);
     expect(p.max_turns).toBeUndefined();
   });
 
-  it("every shipped per-model profile carries the 4096 budget", () => {
+  it("every shipped per-model profile carries the 12000 budget", () => {
     for (const key of Object.keys(settings.model_profiles)) {
-      expect(resolveProfileFrom(settings, key).thinking_budget, key).toBe(4096);
+      expect(resolveProfileFrom(settings, key).thinking_budget, key).toBe(12000);
     }
   });
 });
