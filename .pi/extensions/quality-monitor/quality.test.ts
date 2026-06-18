@@ -31,17 +31,28 @@ describe("assessResponse", () => {
       assessResponse("", [{ name: "Anything", input: {} }], [], new Set()),
     ).toEqual({ ok: true });
   });
-  it("detects repeated tool call", () => {
+  it("allows one repeated tool call", () => {
     const now = [{ name: "Read", input: { file_path: "/a" } }];
-    const prev = [{ name: "Read", input: { file_path: "/a" } }];
-    expect(assessResponse("", now, prev, known)).toEqual({
+    const recent = [[{ name: "Read", input: { file_path: "/a" } }]];
+    expect(assessResponse("", now, recent, known)).toEqual({ ok: true });
+  });
+  it("detects repeated tool call across three consecutive turns", () => {
+    const now = [{ name: "Read", input: { file_path: "/a" } }];
+    const recent = [
+      [{ name: "Read", input: { file_path: "/a" } }],
+      [{ name: "Read", input: { file_path: "/a" } }],
+    ];
+    expect(assessResponse("", now, recent, known)).toEqual({
       ok: false, reason: "repeated_tool_call",
     });
   });
   it("does not flag as repeat when inputs differ", () => {
     const now = [{ name: "Read", input: { file_path: "/a" } }];
-    const prev = [{ name: "Read", input: { file_path: "/b" } }];
-    expect(assessResponse("", now, prev, known)).toEqual({ ok: true });
+    const recent = [
+      [{ name: "Read", input: { file_path: "/a" } }],
+      [{ name: "Read", input: { file_path: "/b" } }],
+    ];
+    expect(assessResponse("", now, recent, known)).toEqual({ ok: true });
   });
   it("detects malformed args sentinel", () => {
     const calls = [{ name: "Read", input: { _raw: "garbage" } }];
@@ -68,7 +79,7 @@ describe("buildCorrectionMessage", () => {
   });
   it("generates repeated-tool-call message", () => {
     const m = buildCorrectionMessage("repeated_tool_call");
-    expect(m).toContain("loop");
+    expect(m).toContain("Do not call that exact tool");
   });
   it("falls back to generic on unknown reason", () => {
     expect(buildCorrectionMessage("weird_thing")).toContain("weird_thing");
@@ -90,6 +101,7 @@ describe("phraseForUser", () => {
 function harness() {
   const handlers: Record<string, ((e: any, c: any) => any)[]> = {};
   const followUps: { msg: string; opts: any }[] = [];
+  let aborted = false;
   const pi = {
     handlers,
     on(name: string, h: (e: any, c: any) => any) {
@@ -100,9 +112,14 @@ function harness() {
     },
   };
   const notifies: string[] = [];
-  const ctx = { ui: { notify: (m: string) => notifies.push(m) } };
+  const ctx = {
+    ui: { notify: (m: string) => notifies.push(m) },
+    abort: () => {
+      aborted = true;
+    },
+  };
   setupQualityMonitor(pi as any);
-  return { pi, ctx, followUps, notifies };
+  return { pi, ctx, followUps, notifies, get aborted() { return aborted; } };
 }
 async function fire(h: any, name: string, event: any) {
   for (const fn of h.pi.handlers[name] ?? []) await fn(event, h.ctx);
@@ -137,5 +154,56 @@ describe("quality-monitor turn_end", () => {
     });
     expect(h.followUps).toHaveLength(0);
     expect(h.notifies).toHaveLength(0);
+  });
+
+  it("allows one duplicate tool turn before redirecting on the third", async () => {
+    const message = {
+      stopReason: "stop",
+      content: [{ type: "toolCall", name: "Grep", arguments: { pattern: "needle", path: "." } }],
+    };
+
+    await fire(h, "turn_end", { message });
+    await fire(h, "turn_end", { message });
+    expect(h.followUps).toHaveLength(0);
+    expect(h.notifies).toHaveLength(0);
+
+    await fire(h, "turn_end", { message });
+    expect(h.followUps).toHaveLength(1);
+    expect(h.followUps[0].opts).toEqual({ deliverAs: "steer" });
+    expect(h.notifies[0]).toMatch(/several turns in a row/i);
+  });
+
+  it("aborts instead of sending a second repeated-tool correction", async () => {
+    const message = {
+      stopReason: "stop",
+      content: [{ type: "toolCall", name: "Grep", arguments: { pattern: "needle", path: "." } }],
+    };
+
+    await fire(h, "turn_end", { message });
+    await fire(h, "turn_end", { message });
+    await fire(h, "turn_end", { message });
+    expect(h.followUps).toHaveLength(1);
+    expect(h.aborted).toBe(false);
+
+    await fire(h, "turn_end", { message });
+    expect(h.followUps).toHaveLength(1);
+    expect(h.aborted).toBe(true);
+    expect(h.notifies.at(-1)).toMatch(/stopping the run/i);
+  });
+
+  it("does not count different failure reasons toward repeated-tool abort", async () => {
+    const message = {
+      stopReason: "stop",
+      content: [{ type: "toolCall", name: "Grep", arguments: { pattern: "needle", path: "." } }],
+    };
+
+    await fire(h, "turn_end", { message: { stopReason: "stop", content: [] } });
+    await fire(h, "turn_end", { message });
+    await fire(h, "turn_end", { message });
+    await fire(h, "turn_end", { message });
+
+    expect(h.followUps).toHaveLength(2);
+    expect(h.aborted).toBe(false);
+    expect(h.notifies.at(-1)).toMatch(/redirecting the model/i);
   });
 });

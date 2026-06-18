@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { assessResponse, buildCorrectionMessage, phraseForUser, type ToolCall } from "./quality.ts";
-import { harnessIntervention } from "../_shared/intervention.ts";
+import { harnessIntervention, markHarnessAbort } from "../_shared/intervention.ts";
 
 // Port of local/quality.py. Hooks turn_end, inspects the assistant message
 // + previous turn's tool calls, and — if we detect a failure mode — sends
@@ -9,8 +9,9 @@ import { harnessIntervention } from "../_shared/intervention.ts";
 
 // Session-scoped state. Pi reuses extensions across turns within a session;
 // a fresh extension instance is loaded per session via the session lifecycle.
-let previousToolCalls: ToolCall[] = [];
+let recentToolCallTurns: ToolCall[][] = [];
 let consecutiveFailures = 0;
+let lastFailureReason: string | undefined;
 const MAX_CONSECUTIVE_CORRECTIONS = 2; // stop nudging after 2 failed corrections
 
 export default function (pi: ExtensionAPI) {
@@ -23,8 +24,9 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("session_start", async () => {
-    previousToolCalls = [];
+    recentToolCallTurns = [];
     consecutiveFailures = 0;
+    lastFailureReason = undefined;
   });
 
   pi.on("turn_end", async (event, ctx) => {
@@ -50,18 +52,38 @@ export default function (pi: ExtensionAPI) {
       .filter((c: any) => c?.type === "toolCall")
       .map((c: any) => ({ name: c.name, input: c.arguments ?? c.input ?? {} }));
 
-    const verdict = assessResponse(text, currentCalls, previousToolCalls, knownTools);
+    const verdict = assessResponse(text, currentCalls, recentToolCallTurns, knownTools);
 
     // Update rolling state for next turn regardless of verdict
-    previousToolCalls = currentCalls;
+    recentToolCallTurns = currentCalls.length > 0
+      ? [...recentToolCallTurns, currentCalls].slice(-2)
+      : [];
 
     if (verdict.ok) {
       consecutiveFailures = 0;
+      lastFailureReason = undefined;
       return;
     }
 
     // Cap corrections so we don't burn turns in a correction loop
+    if (lastFailureReason !== verdict.reason) {
+      consecutiveFailures = 0;
+      lastFailureReason = verdict.reason;
+    }
     consecutiveFailures++;
+    if (
+      verdict.reason === "repeated_tool_call" &&
+      consecutiveFailures >= MAX_CONSECUTIVE_CORRECTIONS
+    ) {
+      harnessIntervention(
+        ctx,
+        `${phraseForUser(verdict.reason)} — stopping the run.`,
+      );
+      markHarnessAbort("repeated tool-call loop");
+      if (typeof (ctx as any).abort === "function") (ctx as any).abort();
+      return;
+    }
+
     if (consecutiveFailures > MAX_CONSECUTIVE_CORRECTIONS) {
       harnessIntervention(
         ctx,

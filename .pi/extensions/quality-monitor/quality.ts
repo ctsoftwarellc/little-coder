@@ -9,10 +9,16 @@ export type QualityResult =
   | { ok: true }
   | { ok: false; reason: string };
 
+export const REPEATED_TOOL_CALL_MIN_CONSECUTIVE_TURNS = 3;
+
+function toolCallSignature(tc: ToolCall): string {
+  return `${tc.name}\0${JSON.stringify(tc.input)}`;
+}
+
 export function assessResponse(
   text: string,
   toolCalls: ToolCall[],
-  recentToolCalls: ToolCall[],
+  recentToolCallTurns: ToolCall[][],
   knownTools: Set<string>,
 ): QualityResult {
   // 1. Empty response with no tool calls
@@ -28,14 +34,16 @@ export function assessResponse(
     }
   }
 
-  // 3. Repeated tool call loop (exact name+input match with previous turn)
-  if (toolCalls.length > 0 && recentToolCalls.length > 0) {
+  // 3. Repeated tool call loop (exact name+input match across consecutive turns)
+  const neededPreviousTurns = REPEATED_TOOL_CALL_MIN_CONSECUTIVE_TURNS - 1;
+  if (toolCalls.length > 0 && recentToolCallTurns.length >= neededPreviousTurns) {
     for (const tc of toolCalls) {
-      for (const prev of recentToolCalls) {
-        if (tc.name === prev.name &&
-            JSON.stringify(tc.input) === JSON.stringify(prev.input)) {
-          return { ok: false, reason: "repeated_tool_call" };
-        }
+      const signature = toolCallSignature(tc);
+      const repeatedAcrossRecentTurns = recentToolCallTurns
+        .slice(-neededPreviousTurns)
+        .every((turn) => turn.some((prev) => toolCallSignature(prev) === signature));
+      if (repeatedAcrossRecentTurns) {
+        return { ok: false, reason: "repeated_tool_call" };
       }
     }
   }
@@ -59,9 +67,10 @@ export function buildCorrectionMessage(reason: string): string {
       "Your tool call had an empty name. Please specify a valid tool name. " +
       "Available tools include: Read, Write, Edit, Bash, Glob, Grep.",
     repeated_tool_call:
-      "You just made the exact same tool call as your previous turn. " +
-      "This suggests you may be stuck in a loop. Please try a different " +
-      "approach or explain what you're trying to accomplish.",
+      "You made the exact same tool call several turns in a row. " +
+      "Do not call that exact tool with those exact arguments again. " +
+      "Use a different search term, inspect a relevant file or directory, " +
+      "broaden the scope once, or stop and summarize the blocker.",
   };
 
   if (reason.startsWith("unknown_tool:")) {
@@ -95,7 +104,7 @@ export function phraseForUser(reason: string): string {
   const phrases: Record<string, string> = {
     empty_response: "the model returned an empty response",
     empty_tool_name: "the model emitted a tool call with no name",
-    repeated_tool_call: "the model repeated its previous tool call verbatim",
+    repeated_tool_call: "the model repeated the same tool call several turns in a row",
   };
   return phrases[reason] ?? `quality issue (${reason})`;
 }
